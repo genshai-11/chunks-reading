@@ -1,0 +1,16 @@
+{
+  "hosting": {
+    "site": "chunks-reading-studio",
+    "public": "dist",
+    "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

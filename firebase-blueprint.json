@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "TeacherProfile": {
+      "title": "TeacherProfile",
+      "description": "Profile and classroom preferences of an authenticated teacher.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Teacher Firebase Auth UID" },
+        "email": { "type": "string", "description": "Teacher Google email address" },
+        "displayName": { "type": "string", "description": "Teacher display name" },
+        "photoURL": { "type": "string", "description": "Optional avatar URL" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["uid", "email", "displayName"]
+    },
+    "ReadingResource": {
+      "title": "ReadingResource",
+      "description": "English reading resource managed by a teacher, in draft or published status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique resource ID" },
+        "ownerId": { "type": "string", "description": "Teacher UID who owns this resource" },
+        "title": { "type": "string", "description": "Title of the reading resource", "maxLength": 200 },
+        "category": { "type": "string", "description": "Category or genre", "maxLength": 100 },
+        "topic": { "type": "string", "description": "Topic or tags summary", "maxLength": 100 },
+        "level": { "type": "string", "description": "Estimated CEFR reading level (e.g. A2, B1, B2, C1)", "maxLength": 50 },
+        "sourceType": { "type": "string", "enum": ["paste", "txt", "url", "seeded"], "description": "Method used to add this text" },
+        "sourceUrl": { "type": "string", "description": "Original source URL if imported", "maxLength": 500 },
+        "provenance": { "type": "string", "description": "Attribution or publisher info", "maxLength": 300 },
+        "status": { "type": "string", "enum": ["draft", "published", "archived"], "description": "Resource publication status" },
+        "canonicalText": { "type": "string", "description": "Full plain English text", "maxLength": 100000 },
+        "sentences": { "type": "array", "description": "Pre-segmented sentence chunks" },
+        "paragraphs": { "type": "array", "description": "Pre-segmented paragraph chunks" },
+        "annotations": { "type": "array", "description": "Teacher reviewed phrase candidates" },
+        "publishedVersionId": { "type": "string", "description": "Immutable version pointer if published" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "title", "category", "status", "canonicalText"]
+    },
+    "ClassroomRoom": {
+      "title": "ClassroomRoom",
+      "description": "Live teacher-controlled reading room state synchronized to learners.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Room ID or code" },
+        "teacherId": { "type": "string", "description": "Teacher Firebase Auth UID who controls the room" },
+        "teacherName": { "type": "string", "description": "Teacher display name", "maxLength": 100 },
+        "resourceId": { "type": "string", "description": "Current published resource ID", "maxLength": 100 },
+        "resourceTitle": { "type": "string", "description": "Title of presented reading", "maxLength": 200 },
+        "status": { "type": "string", "enum": ["active", "ended"], "description": "Room operational status" },
+        "granularity": { "type": "string", "enum": ["sentence", "paragraph"], "description": "Reading unit granularity" },
+        "highlightEnabled": { "type": "boolean", "description": "Whether approved phrase highlights are visible" },
+        "timingPolicy": { "type": "string", "enum": ["hold_then_erase", "erase_within_window"], "description": "Eraser timing model" },
+        "holdDurationMs": { "type": "number", "description": "Hold duration in milliseconds" },
+        "eraseDurationMs": { "type": "number", "description": "Erase duration in milliseconds" },
+        "totalWindowMs": { "type": "number", "description": "Total window duration in milliseconds" },
+        "playbackStatus": { "type": "string", "enum": ["idle", "playing", "paused", "manual_show", "ended"], "description": "Current authoritative playback state" },
+        "currentUnit": { "type": "object", "description": "Authoritative current chunk (contains only current unit text and approved annotations)" },
+        "serverStartTime": { "type": "number", "description": "Timestamp when playback began in milliseconds" },
+        "pausedElapsedMs": { "type": "number", "description": "Elapsed phase time preserved while paused in milliseconds" },
+        "revision": { "type": "number", "description": "Monotonically increasing room revision counter" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "teacherId", "status", "granularity", "playbackStatus", "revision"]
+    },
+    "RoomParticipant": {
+      "title": "RoomParticipant",
+      "description": "Learner presence record inside a specific classroom room.",
+      "type": "object",
+      "properties": {
+        "participantId": { "type": "string", "description": "Unique participant identifier", "maxLength": 128 },
+        "name": { "type": "string", "description": "Learner entered name", "maxLength": 80 },
+        "joinedAt": { "type": "number", "description": "Join timestamp in ms" },
+        "lastSeen": { "type": "number", "description": "Last heartbeat timestamp in ms" },
+        "isRemoved": { "type": "boolean", "description": "Whether the teacher has removed this participant" }
+      },
+      "required": ["participantId", "name", "joinedAt"]
+    }
+  },
+  "firestore": {
+    "/teachers/{teacherId}": {
+      "schema": "#/entities/TeacherProfile",
+      "description": "Teacher profile document"
+    },
+    "/resources/{resourceId}": {
+      "schema": "#/entities/ReadingResource",
+      "description": "Teacher-owned library resources"
+    },
+    "/rooms/{roomId}": {
+      "schema": "#/entities/ClassroomRoom",
+      "description": "Active classroom rooms controlled by teachers and read by learners"
+    },
+    "/rooms/{roomId}/participants/{participantId}": {
+      "schema": "#/entities/RoomParticipant",
+      "description": "Learners connected to the classroom"
+    }
+  }
+}

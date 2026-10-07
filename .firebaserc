@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "gen-lang-client-0589169162"
+  },
+  "targets": {
+    "gen-lang-client-0589169162": {
+      "hosting": {
+        "chunks-reading-studio": [
+          "chunks-reading-studio"
+        ]
+      }
+    }
+  }
+}

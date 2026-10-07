@@ -1,0 +1,182 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    --font-serif: 'Newsreader', Georgia, Cambria, serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #FAF8F0;
+    color: #111111;
+  }
+}
+
+/* Minimal Neobrutalism custom utility classes */
+.neo-box {
+  background-color: #FFFFFF;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+.neo-box-sm {
+  background-color: #FFFFFF;
+  border: 1.5px solid #000000;
+  box-shadow: 1.5px 1.5px 0px #000000;
+}
+
+.neo-box-lg {
+  background-color: #FFFFFF;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.neo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  transition: all 0.1s ease-in-out;
+  cursor: pointer;
+}
+
+.neo-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.neo-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+.neo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 1.5px 1.5px 0px #000000;
+}
+
+.neo-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  border: 1.5px solid #000000;
+  box-shadow: 1.5px 1.5px 0px #000000;
+  transition: all 0.1s ease-in-out;
+  cursor: pointer;
+}
+
+.neo-btn-sm:hover {
+  transform: translate(-0.5px, -0.5px);
+  box-shadow: 2px 2px 0px #000000;
+}
+
+.neo-btn-sm:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0.5px 0.5px 0px #000000;
+}
+
+.neo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1.5px solid #000000;
+  box-shadow: 1px 1px 0px #000000;
+}
+
+.neo-input {
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  background-color: #FFFFFF;
+  font-weight: 600;
+  padding: 0.45rem 0.65rem;
+  outline: none;
+  transition: all 0.1s;
+}
+
+.neo-input:focus {
+  box-shadow: 3px 3px 0px #000000;
+  background-color: #FFFDF8;
+}
+
+.font-reading {
+  font-family: var(--font-serif);
+}
+
+.font-mono-code {
+  font-family: var(--font-mono);
+}
+
+/* Minimal Paper canvas for book reading */
+.bg-paper-grid {
+  background-color: #FAF8F0;
+  background-image: radial-gradient(#000000 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+}
+
+.bg-paper-reading {
+  background-color: #FFFDF9;
+}
+
+/* Tan biến (Vaporize / Disintegrate) Animation Keyframes */
+@keyframes vaporizeFloat {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px) scale(1);
+    letter-spacing: normal;
+  }
+  35% {
+    opacity: 0.85;
+    filter: blur(1.5px);
+    transform: translateY(-3px) scale(1.02);
+    letter-spacing: 0.02em;
+  }
+  70% {
+    opacity: 0.35;
+    filter: blur(5px);
+    transform: translateY(-12px) scale(1.05);
+    letter-spacing: 0.08em;
+  }
+  100% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(-24px) scale(1.08);
+    letter-spacing: 0.16em;
+  }
+}
+
+@keyframes particleMist {
+  0% {
+    opacity: 0.8;
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translate(var(--x, 10px), -15px) scale(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x, 20px), -30px) scale(0.2);
+  }
+}
+
+.anim-vaporize {
+  animation: vaporizeFloat var(--erase-duration, 1200ms) cubic-bezier(0.25, 0.8, 0.4, 1) forwards;
+}
+
+.vapor-particle {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  animation: particleMist 1.2s ease-out forwards;
+}

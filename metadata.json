@@ -1,0 +1,6 @@
+{
+  "name": "Chunks Reading - Teacher-Controlled Classroom",
+  "description": "Neobrutalist classroom teaching assistant for chunk-based English reading with synchronized teacher-controlled playback, phrase highlights, and real-time learner participation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

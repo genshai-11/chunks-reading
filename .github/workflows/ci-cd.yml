@@ -1,0 +1,47 @@
+name: CI/CD Pipeline & Firebase Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - feat/**
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Type Check & Lint
+        run: bun run lint
+
+      - name: Run Test Suite
+        run: bun run test
+
+      - name: Build Production Assets
+        run: bun run build
+        env:
+          VITE_FIREBASE_PROJECT_ID: "gen-lang-client-0589169162"
+
+      - name: Deploy to Firebase Hosting
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/firebase-e2e-classroom-deploy'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_GEN_LANG_CLIENT_0589169162 }}'
+          channelId: live
+          projectId: gen-lang-client-0589169162
+          target: chunks-reading-studio
