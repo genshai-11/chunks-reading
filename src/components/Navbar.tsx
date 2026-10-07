@@ -58,31 +58,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* View Switcher Tabs - Minimal */}
-        <div className="flex border border-black bg-[#FAF8F0] p-0.5 shadow-[1px_1px_0px_#000]">
-          <button
-            type="button"
-            onClick={() => onSwitchView('teacher')}
-            className={`px-2 py-0.5 text-[11px] font-mono font-bold uppercase flex items-center gap-1 transition-all ${
-              currentView === 'teacher'
-                ? 'bg-[#FF3838] text-white shadow-[1px_1px_0px_#000]'
-                : 'text-neutral-700 hover:text-black'
-            }`}
-          >
-            <GraduationCap size={13} /> Teacher
-          </button>
-          <button
-            type="button"
-            onClick={() => onSwitchView('student')}
-            className={`px-2 py-0.5 text-[11px] font-mono font-bold uppercase flex items-center gap-1 transition-all ${
-              currentView === 'student'
-                ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]'
-                : 'text-neutral-700 hover:text-black'
-            }`}
-          >
-            <Monitor size={13} /> Learner Desk
-          </button>
-        </div>
+        {/* View Switcher Tabs - Only visible in Teacher view */}
+        {currentView === 'teacher' && (
+          <div className="flex border border-black bg-[#FAF8F0] p-0.5 shadow-[1px_1px_0px_#000]">
+            <button
+              type="button"
+              onClick={() => onSwitchView('teacher')}
+              className="px-2 py-0.5 text-[11px] font-mono font-bold uppercase flex items-center gap-1 transition-all bg-[#FF3838] text-white shadow-[1px_1px_0px_#000]"
+            >
+              <GraduationCap size={13} /> Teacher
+            </button>
+            <button
+              type="button"
+              onClick={() => onSwitchView('student')}
+              className="px-2 py-0.5 text-[11px] font-mono font-bold uppercase flex items-center gap-1 transition-all text-neutral-700 hover:text-black"
+            >
+              <Monitor size={13} /> Learner Desk
+            </button>
+          </div>
+        )}
 
         {/* Teacher Auth / Profile Area */}
         <div className="flex items-center gap-2">
@@ -111,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <LogOut size={13} />
               </button>
             </div>
-          ) : (
+          ) : currentView === 'teacher' ? (
             <button
               type="button"
               onClick={handleGoogleSignIn}
@@ -137,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </svg>
               <span>Teacher Login</span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

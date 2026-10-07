@@ -204,20 +204,10 @@ export default function App() {
       </main>
 
       {/* Neobrutalist Footer */}
-      <footer className="border-t-3 border-black bg-white py-4 px-6">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-[#FF3838] border border-black inline-block"></span>
-            <span className="font-bold text-black uppercase">Chunks Reading Assistant</span>
-            <span className="text-neutral-400">• Neobrutalist Teaching Edition</span>
-          </div>
-          <div className="flex items-center gap-4 text-neutral-600">
-            <span>Authoritative Paced Clock</span>
-            <span>•</span>
-            <span>Zero Student Registration</span>
-            <span>•</span>
-            <span>Firebase Firestore Protected</span>
-          </div>
+      <footer className="border-t border-black bg-white py-2 px-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between text-xs font-mono">
+          <span className="font-black uppercase tracking-wider">Chunks reading</span>
+          <span className="text-neutral-500 text-[11px]">Teacher-Controlled Paced Reading</span>
         </div>
       </footer>
     </div>

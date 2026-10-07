@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { normalizeDustAngle, DEFAULT_DUST_ANGLE } from '../utils/eraseEffects';
 import {
   doc,
   getDoc,
@@ -51,7 +52,8 @@ export async function createClassroomRoom(
   holdDurationMs: number = 3000,
   eraseDurationMs: number = 1000,
   totalWindowMs: number = 3000,
-  eraseEffect: EraseEffect = 'dissolve'
+  eraseEffect: EraseEffect = 'dissolve',
+  dustAngle: number = DEFAULT_DUST_ANGLE
 ): Promise<ClassroomRoom> {
   const teacherUid = auth.currentUser?.uid;
   if (!teacherUid) throw new Error('Teacher must be signed in to open a classroom');
@@ -91,6 +93,7 @@ export async function createClassroomRoom(
     highlightEnabled,
     timingPolicy,
     eraseEffect,
+    dustAngle: normalizeDustAngle(dustAngle),
     holdDurationMs,
     eraseDurationMs,
     totalWindowMs,
@@ -193,7 +196,8 @@ export async function applyToRoomCommand(
   holdDurationMs: number,
   eraseDurationMs: number,
   totalWindowMs: number,
-  eraseEffect: EraseEffect = 'dissolve'
+  eraseEffect: EraseEffect = 'dissolve',
+  dustAngle: number = DEFAULT_DUST_ANGLE
 ): Promise<void> {
   const units = granularity === 'sentence' ? resource.sentences : resource.paragraphs;
   const safeIndex = Math.max(0, Math.min(unitIndex, units.length - 1));
@@ -227,6 +231,7 @@ export async function applyToRoomCommand(
       highlightEnabled,
       timingPolicy,
       eraseEffect,
+      dustAngle: normalizeDustAngle(dustAngle),
       holdDurationMs,
       eraseDurationMs,
       totalWindowMs,

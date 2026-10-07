@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { DustDirectionControl } from './DustDirectionControl';
+import { ERASE_EFFECT_OPTIONS, DEFAULT_DUST_ANGLE } from '../utils/eraseEffects';
+import { EraseTextEffect } from './EraseTextEffect';
 import React, { useState, useEffect, useRef } from 'react';
 import { ClassroomRoom, CalculatedTimeline, ApprovedSpan, RoomParticipant, EraseEffect } from '../types';
 import { calculateRoomTimeline } from '../utils/timingEngine';
@@ -28,6 +31,8 @@ interface LiveLearnerViewProps {
   participants: RoomParticipant[];
   onClose?: () => void;
   stagedEraseEffect?: EraseEffect;
+  stagedDustAngle?: number;
+  onSelectDustAngle?: (angle: number) => void;
   onSelectEraseEffect?: (effect: EraseEffect) => void;
   stagedHoldMs?: number;
   stagedEraseMs?: number;
@@ -38,6 +43,8 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
   participants,
   onClose,
   stagedEraseEffect,
+  stagedDustAngle = DEFAULT_DUST_ANGLE,
+  onSelectDustAngle,
   onSelectEraseEffect,
   stagedHoldMs = 3000,
   stagedEraseMs = 1000,
@@ -165,38 +172,6 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
     activeTimeline.phase === 'erase' ||
     activeTimeline.phase === 'paused' ||
     activeTimeline.phase === 'manual_show';
-
-  // Compute text erase animation styling using selected effect
-  let textContainerStyle: React.CSSProperties = {};
-  if (activeTimeline.phase === 'erase') {
-    const p = Math.min(1, Math.max(0, activeTimeline.progress));
-    if (activeEffect === 'vaporize') {
-      textContainerStyle = {
-        opacity: Math.max(0, Math.pow(1 - p, 1.6)),
-        filter: `blur(${p * 10}px)`,
-        transform: `translateY(-${p * 20}px) scale(${1 + p * 0.05})`,
-        letterSpacing: `${p * 0.12}em`,
-      };
-    } else if (activeEffect === 'dissolve') {
-      textContainerStyle = {
-        opacity: Math.max(0, 1 - p),
-        filter: `contrast(${100 + p * 120}%) blur(${p * 6}px)`,
-        transform: `scale(${1 - p * 0.04})`,
-      };
-    } else if (activeEffect === 'fade') {
-      textContainerStyle = {
-        opacity: Math.max(0, 1 - p),
-        filter: `blur(${p * 3.5}px)`,
-      };
-    } else {
-      const wipePercent = Math.round(p * 100);
-      textContainerStyle = {
-        maskImage: `linear-gradient(to right, transparent ${wipePercent}%, black ${Math.min(100, wipePercent + 12)}%)`,
-        WebkitMaskImage: `linear-gradient(to right, transparent ${wipePercent}%, black ${Math.min(100, wipePercent + 12)}%)`,
-        opacity: Math.max(0.15, 1 - p * 0.8),
-      };
-    }
-  }
 
   // Progress Bar percent
   let progressPercent = 0;
@@ -328,15 +303,8 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
             <Sliders size={12} />
             Hiệu ứng xóa:
           </span>
-          <div className="inline-flex border border-black bg-white p-0.5 shadow-[1px_1px_0px_#000]">
-            {(
-              [
-                { id: 'vaporize', label: '✨ Tan biến', activeBg: 'bg-[#FF3838] text-white' },
-                { id: 'dissolve', label: '🌫️ Hòa tan', activeBg: 'bg-[#FFE500] text-black' },
-                { id: 'fade', label: '💨 Mờ dần', activeBg: 'bg-[#00D2FF] text-black' },
-                { id: 'wipe', label: '✂️ Gạt cuộn', activeBg: 'bg-black text-white' },
-              ] as const
-            ).map(eff => (
+          <div className="inline-flex flex-wrap border border-black bg-white p-0.5 shadow-[1px_1px_0px_#000]">
+            {ERASE_EFFECT_OPTIONS.map(eff => (
               <button
                 key={eff.id}
                 type="button"
@@ -385,6 +353,8 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
           </span>
         </div>
       </div>
+
+      {activeEffect === 'dust' && onSelectDustAngle && <DustDirectionControl angle={stagedDustAngle} onChange={onSelectDustAngle} />}
 
       {/* Screen Frame Simulation */}
       <div className={`mx-auto transition-all ${viewMode === 'mobile' ? 'max-w-[360px]' : 'w-full'}`}>
@@ -454,9 +424,12 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
             {/* Reading Content Center */}
             <div className="flex-1 flex items-center justify-center py-3 sm:py-6">
               {isTextVisible && currentUnit?.text ? (
-                <div
-                  style={textContainerStyle}
-                  className="w-full text-center max-w-xl transition-all"
+                <EraseTextEffect
+                  effect={isSimulating ? activeEffect : (room.eraseEffect || 'vaporize')}
+                  timeline={activeTimeline}
+                  dustAngle={isSimulating ? stagedDustAngle : room.dustAngle}
+                  contentKey={JSON.stringify([currentUnit.text, approvedSpans])}
+                  className="w-full text-center max-w-xl"
                 >
                   <p className={`font-reading ${viewMode === 'mobile' ? 'text-lg leading-relaxed' : 'text-xl sm:text-2xl leading-relaxed'} text-[#111111] font-normal`}>
                     {slices.map((slice, idx) =>
@@ -474,7 +447,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
                       )
                     )}
                   </p>
-                </div>
+                </EraseTextEffect>
               ) : (
                 <div className="text-center py-4 space-y-1.5 text-neutral-400 font-mono">
                   <Clock size={16} className="mx-auto animate-pulse" />

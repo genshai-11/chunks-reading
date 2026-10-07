@@ -15,7 +15,7 @@ export type Granularity = 'sentence' | 'paragraph';
 
 export type TimingPolicy = 'hold_then_erase' | 'erase_within_window';
 
-export type EraseEffect = 'vaporize' | 'dissolve' | 'wipe' | 'fade';
+export type EraseEffect = 'vaporize' | 'dissolve' | 'wipe' | 'fade' | 'eraser' | 'dust' | 'sparkle';
 
 export type PlaybackStatus = 'idle' | 'playing' | 'paused' | 'manual_show' | 'ended';
 
@@ -81,6 +81,7 @@ export interface ClassroomRoom {
   highlightEnabled: boolean;
   timingPolicy: TimingPolicy;
   eraseEffect?: EraseEffect;
+  dustAngle?: number; // -180..180 degrees; 90 = down, default -45
   holdDurationMs: number;
   eraseDurationMs: number;
   totalWindowMs: number;

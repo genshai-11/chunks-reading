@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { EraseTextEffect } from './EraseTextEffect';
 import React, { useState, useEffect } from 'react';
 import {
   ClassroomRoom,
@@ -305,18 +306,6 @@ export const StudentView: React.FC<StudentViewProps> = ({
               Enter Classroom <ArrowRight size={14} className="ml-1 inline" />
             </button>
           </form>
-
-          {onSwitchToTeacher && (
-            <div className="mt-5 pt-3 border-t border-neutral-200 text-center">
-              <button
-                type="button"
-                onClick={onSwitchToTeacher}
-                className="text-xs font-mono text-neutral-600 underline font-bold"
-              >
-                Teacher Portal
-              </button>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -336,48 +325,6 @@ export const StudentView: React.FC<StudentViewProps> = ({
     timeline.phase === 'paused' ||
     timeline.phase === 'manual_show';
 
-  // Erase mask and dynamic animation styling
-  let textContainerStyle: React.CSSProperties = {};
-  if (timeline.phase === 'erase') {
-    if (prefersReducedMotion) {
-      textContainerStyle = {
-        opacity: Math.max(0, 1 - timeline.progress),
-      };
-    } else {
-      const p = Math.min(1, Math.max(0, timeline.progress));
-      if (effectiveEraseEffect === 'vaporize') {
-        // ✨ Tan biến: upward mist float, atmospheric blur, dissolving opacity & expanding letter spacing
-        textContainerStyle = {
-          opacity: Math.max(0, Math.pow(1 - p, 1.6)),
-          filter: `blur(${p * 10}px)`,
-          transform: `translateY(-${p * 22}px) scale(${1 + p * 0.05})`,
-          letterSpacing: `${p * 0.12}em`,
-        };
-      } else if (effectiveEraseEffect === 'dissolve') {
-        // 🌫️ Dissolve / Hòa tan: contrast shift and speckled dispersal
-        textContainerStyle = {
-          opacity: Math.max(0, 1 - p),
-          filter: `contrast(${100 + p * 120}%) blur(${p * 6}px)`,
-          transform: `scale(${1 - p * 0.04})`,
-        };
-      } else if (effectiveEraseEffect === 'fade') {
-        // 💨 Smooth Fade: clean opacity and soft blur
-        textContainerStyle = {
-          opacity: Math.max(0, 1 - p),
-          filter: `blur(${p * 3.5}px)`,
-        };
-      } else {
-        // ✂️ Neo Wipe: sharp directional gradient sweep
-        const wipePercent = Math.round(p * 100);
-        textContainerStyle = {
-          maskImage: `linear-gradient(to right, transparent ${wipePercent}%, black ${Math.min(100, wipePercent + 12)}%)`,
-          WebkitMaskImage: `linear-gradient(to right, transparent ${wipePercent}%, black ${Math.min(100, wipePercent + 12)}%)`,
-          opacity: Math.max(0.15, 1 - p * 0.8),
-        };
-      }
-    }
-  }
-
   // Progress Bar Percent for Erase / Hold
   let progressPercent = 0;
   if (timeline.phase === 'hold') {
@@ -396,36 +343,41 @@ export const StudentView: React.FC<StudentViewProps> = ({
     });
   };
 
+  // Progress calculations
+  const currentUnitIndex = currentUnit ? currentUnit.index : 0;
+  const totalUnits = currentUnit ? currentUnit.totalUnits : 0;
+  const unitProgressPct = totalUnits > 0 ? Math.round(((currentUnitIndex + 1) / totalUnits) * 100) : 0;
+
   return (
-    <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 py-2 sm:py-5 space-y-3">
+    <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 py-2 sm:py-5 space-y-2 sm:space-y-3">
       {/* Sleek Minimal Mobile-Friendly Top Bar */}
-      <div className="neo-box-sm bg-white p-2 sm:p-2.5 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="neo-badge bg-[#FFE500] text-black text-[11px] font-mono shrink-0">
+      <div className="neo-box-sm bg-white p-2 sm:p-2.5 flex items-center justify-between gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="neo-badge bg-[#FFE500] text-black text-[10px] sm:text-[11px] font-mono shrink-0">
             {activeRoomId}
           </span>
-          <span className="text-xs font-mono font-bold text-neutral-800 truncate">
-            {room?.teacherName ? `Teacher: ${room.teacherName}` : 'Live Room'}
+          <span className="text-[11px] sm:text-xs font-mono font-bold text-neutral-800 truncate">
+            {room?.teacherName ? `GV: ${room.teacherName}` : 'Live Room'}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             type="button"
             onClick={handleCopyShareLink}
-            className="neo-btn-sm px-2 py-0.5 bg-white text-black text-[11px] font-mono font-bold flex items-center gap-1"
+            className="neo-btn-sm px-1.5 sm:px-2 py-0.5 bg-white text-black text-[10px] sm:text-[11px] font-mono font-bold flex items-center gap-1 shrink-0"
             title="Share Room Link"
           >
             {copiedShareLink ? <Sparkles size={11} className="text-green-600" /> : <ArrowRight size={11} />}
-            <span>{copiedShareLink ? 'Copied!' : 'Share Link'}</span>
+            <span className="hidden xs:inline">{copiedShareLink ? 'Đã chép!' : 'Chia sẻ'}</span>
           </button>
 
-          <div className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 bg-neutral-100 border border-black">
+          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 py-0.5 bg-neutral-100 border border-black shrink-0">
             <Users size={11} />
             <span>{participants.length}</span>
           </div>
 
-          <span className="text-[11px] font-mono px-2 py-0.5 bg-[#4ADE80] border border-black text-black font-bold hidden xs:inline">
+          <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 py-0.5 bg-[#4ADE80] border border-black text-black font-bold truncate max-w-[80px] sm:max-w-none shrink-0">
             {learnerName}
           </span>
         </div>
@@ -447,50 +399,65 @@ export const StudentView: React.FC<StudentViewProps> = ({
       )}
 
       {/* Book-like Reading Paper Canvas (Optimized for Phone & Desktop) */}
-      <div className="neo-box bg-paper-reading min-h-[300px] sm:min-h-[420px] p-5 sm:p-10 flex flex-col justify-between relative overflow-hidden">
-        {/* Subtle Phase Indicator & Live Countdown Progress */}
-        <div className="flex items-center justify-between border-b border-black/10 pb-2.5 mb-4">
-          <span className="text-[11px] font-mono uppercase text-neutral-500 font-bold truncate max-w-[180px] sm:max-w-md">
-            {room?.resourceTitle || 'English Reading'}
-          </span>
+      <div className="neo-box bg-paper-reading min-h-[260px] sm:min-h-[400px] p-3 sm:p-6 md:p-8 flex flex-col justify-between relative overflow-hidden">
+        {/* Paper Top Bar: Resource Title & Sentence Progress & Live Phase */}
+        <div className="border-b border-black/10 pb-2 mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-1.5 pb-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] font-mono uppercase text-neutral-500 font-bold truncate max-w-[120px] xs:max-w-[180px] sm:max-w-md">
+                {room?.resourceTitle || 'English Reading'}
+              </span>
+              <span className="neo-badge bg-[#FFE500] text-black text-[10px] font-mono font-bold shrink-0">
+                Câu {currentUnit ? currentUnit.index + 1 : 0} / {currentUnit ? currentUnit.totalUnits : 0} ({unitProgressPct}%)
+              </span>
+            </div>
 
-          <div className="flex items-center gap-1.5">
-            {timeline.phase === 'hold' && (
-              <span className="neo-badge bg-[#4ADE80] text-black text-[10px]">
-                Read ({Math.ceil((timeline.effectiveHoldMs - timeline.elapsedMs) / 1000)}s)
-              </span>
-            )}
-            {timeline.phase === 'erase' && (
-              <span className="neo-badge bg-[#FF3838] text-white text-[10px]">
-                Erasing ({Math.ceil(timeline.remainingMs / 1000)}s)
-              </span>
-            )}
-            {timeline.phase === 'paused' && (
-              <span className="neo-badge bg-[#FFE500] text-black text-[10px]">
-                Paused
-              </span>
-            )}
-            {timeline.phase === 'manual_show' && (
-              <span className="neo-badge bg-[#00D2FF] text-black text-[10px]">
-                Discussion
-              </span>
-            )}
-            {timeline.phase === 'blank_finished' && (
-              <span className="neo-badge bg-neutral-200 text-neutral-700 text-[10px]">
-                Done
-              </span>
-            )}
-            {timeline.phase === 'idle' && (
-              <span className="neo-badge bg-neutral-200 text-neutral-700 text-[10px]">
-                Waiting
-              </span>
-            )}
+            <div className="flex items-center gap-1 shrink-0">
+              {timeline.phase === 'hold' && (
+                <span className="neo-badge bg-[#4ADE80] text-black text-[10px]">
+                  Đọc ({Math.ceil((timeline.effectiveHoldMs - timeline.elapsedMs) / 1000)}s)
+                </span>
+              )}
+              {timeline.phase === 'erase' && (
+                <span className="neo-badge bg-[#FF3838] text-white text-[10px]">
+                  Xóa ({Math.ceil(timeline.remainingMs / 1000)}s)
+                </span>
+              )}
+              {timeline.phase === 'paused' && (
+                <span className="neo-badge bg-[#FFE500] text-black text-[10px]">
+                  Tạm dừng
+                </span>
+              )}
+              {timeline.phase === 'manual_show' && (
+                <span className="neo-badge bg-[#00D2FF] text-black text-[10px]">
+                  Thảo luận
+                </span>
+              )}
+              {timeline.phase === 'blank_finished' && (
+                <span className="neo-badge bg-neutral-200 text-neutral-700 text-[10px]">
+                  Hoàn thành
+                </span>
+              )}
+              {timeline.phase === 'idle' && (
+                <span className="neo-badge bg-neutral-200 text-neutral-700 text-[10px]">
+                  Chờ phát
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Sleek mini progress bar for whole reading piece */}
+          <div className="w-full h-1 bg-black/10 overflow-hidden">
+            <div
+              style={{ width: `${unitProgressPct}%` }}
+              className="h-full bg-black transition-all duration-300"
+            ></div>
           </div>
         </div>
 
-        {/* Minimal Progress Bar (During reading & erase) */}
+        {/* Minimal Timer Countdown Bar (During reading & erase) */}
         {(timeline.phase === 'hold' || timeline.phase === 'erase') && (
-          <div className="w-full h-1 bg-neutral-200 border-b border-black/20 -mt-2 mb-4 overflow-hidden">
+          <div className="w-full h-1 bg-neutral-200 border-b border-black/20 -mt-2 mb-3 overflow-hidden">
             <div
               style={{ width: `${progressPercent}%` }}
               className={`h-full transition-all duration-75 ${
@@ -501,20 +468,23 @@ export const StudentView: React.FC<StudentViewProps> = ({
         )}
 
         {/* Reading Text Center Canvas */}
-        <div className="flex-1 flex items-center justify-center py-6 sm:py-10">
+        <div className="flex-1 flex items-center justify-center py-4 sm:py-8">
           {isTextVisible && currentUnit?.text ? (
-            <div
-              style={textContainerStyle}
-              className="w-full text-center max-w-2xl select-none"
-            >
-              <p className="font-reading text-xl sm:text-3xl md:text-4xl leading-relaxed sm:leading-loose text-[#111111] font-normal tracking-wide">
+            <EraseTextEffect
+                  effect={effectiveEraseEffect}
+                  timeline={timeline}
+                  dustAngle={room?.dustAngle}
+                  contentKey={JSON.stringify([currentUnit.text, approvedSpans])}
+                  className="w-full text-center max-w-2xl select-none px-1"
+                >
+              <p className="font-reading text-xl sm:text-2xl md:text-3xl font-medium leading-relaxed sm:leading-loose text-[#111111] tracking-wide">
                 {slices.map((slice, idx) =>
                   slice.isHighlight && slice.annotation ? (
                     <mark
                       key={idx}
                       onClick={() => setActiveTooltip(slice.annotation!)}
                       className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block cursor-pointer shadow-[1px_1px_0px_#000] active:scale-95 transition-transform"
-                      title="Tap to see meaning"
+                      title="Chạm để xem nghĩa"
                     >
                       {slice.text}
                     </mark>
@@ -523,43 +493,21 @@ export const StudentView: React.FC<StudentViewProps> = ({
                   )
                 )}
               </p>
-            </div>
+            </EraseTextEffect>
           ) : (
             /* Blank Paper Waiting State */
-            <div className="text-center py-8 space-y-2">
+            <div className="text-center py-6 space-y-2">
               <Clock size={20} className="mx-auto text-neutral-400 animate-pulse" />
-              <div className="text-sm font-mono font-bold text-neutral-800 uppercase tracking-wide">
+              <div className="text-xs sm:text-sm font-mono font-bold text-neutral-800 uppercase tracking-wide">
                 {timeline.phase === 'blank_finished'
-                  ? 'Chunk Completed'
-                  : 'Teacher is preparing next chunk...'}
+                  ? 'Đoạn đọc đã ẩn'
+                  : 'Giáo viên đang chuẩn bị đoạn tiếp theo...'}
               </div>
-              <p className="text-[11px] font-mono text-neutral-400">
-                Paced exposure will appear here
+              <p className="text-[10px] sm:text-[11px] font-mono text-neutral-400">
+                Chữ sẽ xuất hiện theo nhịp điều khiển của giáo viên
               </p>
             </div>
           )}
-        </div>
-
-        {/* Subtle Canvas Bottom Note: authoritative effect display only */}
-        <div className="pt-2 border-t border-black/10 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-neutral-500">
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-neutral-700">Hiệu ứng:</span>
-            <span className="neo-badge bg-[#FAF8F0] text-black text-[10px] px-1.5 py-0 border border-black/30">
-              {effectiveEraseEffect === 'vaporize' && '✨ Tan biến'}
-              {effectiveEraseEffect === 'dissolve' && '🌫️ Hòa tan'}
-              {effectiveEraseEffect === 'fade' && '💨 Mờ dần'}
-              {effectiveEraseEffect === 'wipe' && '✂️ Gạt cuộn'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span>Synced with Teacher</span>
-            {approvedSpans.length > 0 && (
-              <span className="text-neutral-700 font-bold hidden xs:inline">
-                (Chạm từ gạch chân để xem nghĩa)
-              </span>
-            )}
-          </div>
         </div>
       </div>
 

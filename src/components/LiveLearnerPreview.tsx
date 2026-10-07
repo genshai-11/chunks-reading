@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { EraseTextEffect } from './EraseTextEffect';
 import React, { useState } from 'react';
 import { ClassroomRoom, CalculatedTimeline, ApprovedSpan } from '../types';
 import { buildRenderSlices } from '../utils/textSegmentation';
@@ -33,38 +34,7 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
     timeline.phase === 'paused' ||
     timeline.phase === 'manual_show';
 
-  // Dynamic animation/masking matching student's perspective
   const selectedEffect = room.eraseEffect || 'vaporize';
-  let textContainerStyle: React.CSSProperties = {};
-  if (timeline.phase === 'erase') {
-    const p = Math.min(1, Math.max(0, timeline.progress));
-    if (selectedEffect === 'vaporize') {
-      textContainerStyle = {
-        opacity: Math.max(0, Math.pow(1 - p, 1.6)),
-        filter: `blur(${p * 8}px)`,
-        transform: `translateY(-${p * 18}px) scale(${1 + p * 0.04})`,
-        letterSpacing: `${p * 0.1}em`,
-      };
-    } else if (selectedEffect === 'dissolve') {
-      textContainerStyle = {
-        opacity: Math.max(0, 1 - p),
-        filter: `contrast(${100 + p * 100}%) blur(${p * 5}px)`,
-        transform: `scale(${1 - p * 0.04})`,
-      };
-    } else if (selectedEffect === 'fade') {
-      textContainerStyle = {
-        opacity: Math.max(0, 1 - p),
-        filter: `blur(${p * 3}px)`,
-      };
-    } else {
-      const wipePercent = Math.round(p * 100);
-      textContainerStyle = {
-        maskImage: `linear-gradient(to right, transparent ${wipePercent}%, black ${Math.min(100, wipePercent + 12)}%)`,
-        WebkitMaskImage: `linear-gradient(to right, transparent ${wipePercent}%, black ${Math.min(100, wipePercent + 12)}%)`,
-        opacity: Math.max(0.15, 1 - p * 0.8),
-      };
-    }
-  }
 
   let progressPercent = 0;
   if (timeline.phase === 'hold') {
@@ -194,7 +164,13 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
               {/* Text Canvas Area */}
               <div className="flex-1 flex items-center justify-center py-4">
                 {isTextVisible && currentUnit?.text ? (
-                  <div style={textContainerStyle} className="w-full text-center">
+                  <EraseTextEffect
+                  effect={room.eraseEffect || 'vaporize'}
+                  timeline={timeline}
+                  dustAngle={room.dustAngle}
+                  contentKey={JSON.stringify([currentUnit.text, approvedSpans])}
+                  className="w-full text-center"
+                >
                     <p
                       className={`font-reading leading-relaxed text-[#111111] font-normal ${
                         deviceMode === 'mobile'
@@ -217,7 +193,7 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
                         )
                       )}
                     </p>
-                  </div>
+                  </EraseTextEffect>
                 ) : (
                   <div className="text-center py-4 space-y-1">
                     <Clock size={16} className="mx-auto text-neutral-400 animate-pulse" />
