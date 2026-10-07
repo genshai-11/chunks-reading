@@ -1,163 +1,142 @@
 import React, { useState, useEffect } from 'react';
-import { Type, Sparkles, AlertCircle } from 'lucide-react';
-import type { Article, RoomState } from '../types';
+import { AlertCircle, Radio } from 'lucide-react';
+import type { LearnerRoomSnapshot } from '../services/roomService';
+import { computeReadingPhase } from '../domain/timing';
+import { sliceTextWithApprovedAnnotations } from '../domain/annotations';
 
 interface StudentViewProps {
-  roomState: RoomState;
-  currentArticle: Article;
+  snapshot: LearnerRoomSnapshot;
+  articleTitle?: string;
 }
 
-export const StudentView: React.FC<StudentViewProps> = ({ roomState, currentArticle }) => {
-  const [fontSize, setFontSize] = useState<number>(32);
-  const [eraserProgress, setEraserProgress] = useState<number>(0);
+export const StudentView: React.FC<StudentViewProps> = ({ snapshot, articleTitle = 'Classroom Reading' }) => {
+  const [clientNow, setClientNow] = useState(Date.now());
 
-  const units = roomState.unitMode === 'sentence' ? currentArticle.sentences : currentArticle.paragraphs;
-  const currentUnit = units[roomState.unitIndex] || units[0];
-
-  // Eraser animation effect loop when active
+  // High-frequency tick for smooth phase & mask derivation
   useEffect(() => {
-    if (roomState.effect !== 'eraser' || roomState.status !== 'reading') {
-      setEraserProgress(0);
-      return;
-    }
-
-    const duration = roomState.holdDurationSec * 1000;
-    const intervalTime = 50;
-    const step = (intervalTime / duration) * 100;
-
-    const timer = setInterval(() => {
-      setEraserProgress((prev) => {
-        if (prev >= 100) return 0;
-        return prev + step;
-      });
-    }, intervalTime);
-
+    const timer = setInterval(() => setClientNow(Date.now()), 25);
     return () => clearInterval(timer);
-  }, [roomState.effect, roomState.status, roomState.unitIndex, roomState.holdDurationSec]);
+  }, []);
 
-  // Helper to highlight phrases within text
-  const renderUnitText = () => {
-    if (!currentUnit) return null;
-    const text = currentUnit.text;
+  // Authoritative phase derived from server timestamps and client offset
+  const derivedPhase = computeReadingPhase(
+    {
+      status: snapshot.status,
+      startedAt: snapshot.startedAt,
+      pausedElapsedMs: snapshot.pausedElapsedMs,
+      timing: snapshot.timing,
+    },
+    clientNow
+  );
 
-    if (!roomState.highlightEnabled || !currentUnit.highlightPhrases || currentUnit.highlightPhrases.length === 0) {
-      return <span>{text}</span>;
-    }
-
-    // Split text with highlights
-    let elements: React.ReactNode[] = [text];
-    for (const phrase of currentUnit.highlightPhrases) {
-      const regex = new RegExp(`(${phrase})`, 'gi');
-      elements = elements.flatMap((part, idx) => {
-        if (typeof part === 'string') {
-          const splitParts = part.split(regex);
-          return splitParts.map((sub, sIdx) => 
-            sub.toLowerCase() === phrase.toLowerCase() ? (
-              <mark key={`${idx}-${sIdx}`} className="chunk-highlight">
-                {sub}
-              </mark>
-            ) : sub
-          );
-        }
-        return part;
-      });
-    }
-
-    return elements;
-  };
+  // Slice current unit text with approved annotations ONLY
+  const segments = sliceTextWithApprovedAnnotations(
+    snapshot.currentUnitText || '',
+    snapshot.annotations || []
+  );
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 min-h-[calc(100vh-80px)] flex flex-col justify-between">
-      {/* Student Top Bar: Article info & Font Sizer */}
-      <div className="flex items-center justify-between pb-4 border-b border-[#E2DBD0] text-xs text-[#5C6761]">
-        <div>
-          <span className="font-serif font-bold text-[#1F2421] text-sm sm:text-base mr-2">
-            {currentArticle.title}
+    <div className="w-full min-h-[calc(100vh-140px)] flex flex-col justify-between px-4 sm:px-8 py-6 max-w-5xl mx-auto">
+      {/* Discreet Ambient Status Bar (Outside Reading Field) */}
+      <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)] text-xs text-[var(--color-muted)] font-mono">
+        <div className="flex items-center space-x-2">
+          <Radio className="w-3.5 h-3.5 text-[var(--color-accent)] animate-pulse" />
+          <span>Room: <strong className="text-[var(--color-ink)]">{snapshot.code}</strong></span>
+          <span className="text-gray-300">•</span>
+          <span>
+            {snapshot.unitMode === 'sentence' ? 'Sentence' : 'Paragraph'} {snapshot.unitIndex + 1} of {snapshot.totalUnits}
           </span>
-          <span className="text-xs text-gray-500">— {currentArticle.author}</span>
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Font Resizer */}
-          <div className="flex items-center bg-white border border-[#DDD5C7] rounded-lg px-2 py-1 space-x-1">
-            <Type className="w-3.5 h-3.5 text-gray-400" />
-            <button
-              onClick={() => setFontSize(s => Math.max(20, s - 4))}
-              className="px-1.5 py-0.5 text-xs font-bold text-[#5C6761] hover:text-[#1F2421]"
-              title="Chữ nhỏ hơn"
-            >
-              A-
-            </button>
-            <span className="text-gray-300">|</span>
-            <button
-              onClick={() => setFontSize(s => Math.min(48, s + 4))}
-              className="px-1.5 py-0.5 text-xs font-bold text-[#5C6761] hover:text-[#1F2421]"
-              title="Chữ lớn hơn"
-            >
-              A+
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Center Reading Canvas */}
-      <div className="my-auto py-12 px-6 sm:px-12 rounded-3xl parchment-sheet border border-[#E2DBD0] relative flex items-center justify-center min-h-[400px]">
-        {/* Paused notice overlay if paused */}
-        {roomState.status === 'paused' && (
-          <div className="absolute top-4 right-4 flex items-center space-x-1 text-xs text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>Giáo viên đang tạm dừng</span>
-          </div>
-        )}
-
-        <div className="w-full text-center relative">
-          {/* Main Reading Text with Effect */}
-          <div 
-            className={`font-serif leading-relaxed text-[#1F2421] transition-all relative inline-block ${
-              roomState.effect === 'guide' && roomState.status === 'reading' ? 'guide-active' : ''
-            }`}
-            style={{ fontSize: `${fontSize}px` }}
-          >
-            {renderUnitText()}
-
-            {/* Eraser effect mask */}
-            {roomState.effect === 'eraser' && roomState.status === 'reading' && (
-              <div 
-                className="absolute inset-0 bg-[#FDFAF5] opacity-90 transition-all pointer-events-none"
-                style={{ 
-                  left: 0,
-                  width: `${eraserProgress}%`,
-                  borderRight: eraserProgress > 0 && eraserProgress < 100 ? '3px solid #285238' : 'none'
-                }}
-              />
-            )}
-          </div>
-
-          {/* Unit counter */}
-          <div className="mt-8 text-xs font-mono text-gray-400">
-            {roomState.unitMode === 'sentence' ? 'Câu' : 'Đoạn'} {roomState.unitIndex + 1} / {units.length}
-          </div>
-        </div>
-      </div>
-
-      {/* Vocabulary / Annotations Drawer for current unit */}
-      <div className="pt-4 border-t border-[#E2DBD0] text-center">
-        {roomState.highlightEnabled && currentArticle.annotations.length > 0 ? (
-          <div className="inline-flex flex-wrap gap-2 justify-center items-center">
-            <span className="text-xs font-semibold text-[#285238] flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> Ghi chú từ vựng:
+          {snapshot.status === 'paused' && (
+            <span className="inline-flex items-center space-x-1 text-amber-800 bg-amber-100 px-2 py-0.5 rounded-[var(--radius-sm)] border border-amber-200">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>Teacher paused</span>
             </span>
-            {currentArticle.annotations.map(ann => (
-              <span key={ann.id} className="text-xs px-2.5 py-1 rounded-md bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
-                <strong>{ann.phrase}</strong>: {ann.meaning}
-              </span>
-            ))}
+          )}
+          {derivedPhase.phase === 'hold' && (
+            <span className="text-[var(--color-muted)]">Reading...</span>
+          )}
+          {derivedPhase.phase === 'erasing' && (
+            <span className="text-[var(--color-accent)]">Finishing unit...</span>
+          )}
+          {derivedPhase.phase === 'blank' && (
+            <span className="text-[var(--color-muted)]">Unit finished</span>
+          )}
+          {snapshot.status === 'manual_show' && (
+            <span className="text-blue-800 bg-blue-50 px-2 py-0.5 rounded-[var(--radius-sm)] border border-blue-200">
+              Teacher explanation
+            </span>
+          )}
+          {snapshot.status === 'waiting' && (
+            <span className="text-[var(--color-muted)]">Waiting for teacher...</span>
+          )}
+        </div>
+      </div>
+
+      {/* Primary Reading Canvas — Viewport-filling, quiet, paper-textured */}
+      <main className="my-auto py-16 px-6 sm:px-14 rounded-[var(--radius-md)] paper-canvas border border-[var(--color-border)] shadow-xs relative flex items-center justify-center min-h-[380px] overflow-hidden">
+        {derivedPhase.isTextVisible ? (
+          <div className="w-full text-center relative max-w-3xl">
+            {/* Literata Reading Text */}
+            <div
+              className={`font-serif text-2xl sm:text-4xl text-[var(--color-ink)] leading-[1.7] relative inline-block text-balance transition-all ${
+                snapshot.guideEnabled && snapshot.status === 'reading' ? 'reading-guide' : ''
+              }`}
+            >
+              {segments.map((seg, idx) =>
+                seg.isHighlight ? (
+                  <mark key={idx} className="phrase-highlight">
+                    {seg.text}
+                  </mark>
+                ) : (
+                  <span key={idx}>{seg.text}</span>
+                )
+              )}
+
+              {/* Opaque line eraser mask */}
+              {snapshot.eraserEffect === 'eraser' && derivedPhase.phase === 'erasing' && (
+                <div
+                  className="absolute inset-0 bg-[var(--color-paper)] pointer-events-none transition-all"
+                  style={{
+                    left: 0,
+                    width: `${derivedPhase.maskProgress * 100}%`,
+                    borderRight: '3px solid var(--color-accent)',
+                  }}
+                />
+              )}
+
+              {/* Soft dissolve mask */}
+              {snapshot.eraserEffect === 'dissolve' && derivedPhase.phase === 'erasing' && (
+                <div
+                  className="absolute inset-0 bg-[var(--color-paper)] pointer-events-none transition-opacity"
+                  style={{
+                    opacity: derivedPhase.maskProgress,
+                  }}
+                />
+              )}
+            </div>
           </div>
         ) : (
-          <p className="text-xs text-gray-500">
-            Tập trung theo dõi nhịp đọc cùng giáo viên trên lớp.
-          </p>
+          <div className="text-center py-12 space-y-2">
+            <div className="font-serif text-lg text-[var(--color-muted)] italic">
+              {snapshot.status === 'ended' 
+                ? 'Session ended by teacher.' 
+                : 'Eyes on the teacher. Waiting for the next unit...'}
+            </div>
+          </div>
         )}
+      </main>
+
+      {/* Discrete Bottom Attribution (No Leakage of Future Text or Unapproved Annotations) */}
+      <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs text-[var(--color-muted)]">
+        <div>
+          <span className="font-serif font-semibold text-[var(--color-ink)]">{articleTitle}</span>
+        </div>
+        <div className="text-[11px] font-mono">
+          CHUNKS Interactive Reading
+        </div>
       </div>
     </div>
   );

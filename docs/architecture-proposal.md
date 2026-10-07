@@ -6,6 +6,10 @@ template: doc
 theme: shadcn
 ---
 
+**Bản lịch sử — không phải chỉ dẫn triển khai.** Nguồn hiện hành: `docs/PRD.md`, `DESIGN.md`, `specs/001-teacher-controlled-reading/spec.md` và `docs/aistudio-handoff.md`. Export Stitch local đã xóa; không cần tái tạo chúng hoặc tạo app mới.
+
+Cập nhật đã chốt: highlight exact phrases có detection; mặc định giữ 3 giây rồi xóa 1 giây, tùy chọn tổng 3 giây với giây cuối xóa; khoảng 20 học viên/phòng; UI và bài tiếng Anh. Những câu hỏi và mặc định bên dưới phản ánh vòng thảo luận trước, không phải quyết định hiện tại.
+
 ## A Kết luận và cơ sở
 **Khuyến nghị: dùng AI Studio Build cho web full-stack, Firebase cho dữ liệu và danh tính.** Dùng Stitch để chốt giao diện trước khi thực thi.
 

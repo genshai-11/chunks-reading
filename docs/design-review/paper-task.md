@@ -1,0 +1,21 @@
+### 1. MISSION & ROLE
+Senior product designer: produce an independent real UI/UX redesign through assigned MCP for Chunks reading teaching assistant, not grading software. Design-only; user must approve before app implementation.
+
+### 2. CONTEXT & INPUT DATA
+Repo: C:/Users/gensh/Desktop/CHUNKS/PROJECT/Chunks-reading. Read AGENTS.md, DESIGN.md, docs/PRD.md, specs/001-teacher-controlled-reading/spec.md, docs/spec-coverage-baseline.md completely. Inspect src/App.tsx, src/components/TeacherView.tsx, StudentView.tsx, src/types.ts and index.css.
+Current: React/Vite browser-local prototype, forest palette/Vietnamese copy, no verified shared backend. Original Stitch designs obsolete.
+Confirmed: CHUNKS RED #b91c1c, cream paper, ink, serif reading, compact UI and polished functional motion, all English. About 20 learners is illustrative target, not cap. Original logo assets/logo.png: tools cannot fetch local Windows paths; only apply via supported asset transfer, otherwise label logo slot and report.
+Teacher Google sign-in; learner link -> name, no signup/admission; online count/name drawer. Sentence/Paragraph independent of Highlight phrases. Fixture "Long story short, we decided to give it a shot." highlight ONLY "Long story short" and "give it a shot".
+Default Hold then erase: hold3s + erase1s, blank at4s. Alternative Erase within window: total3s with final1s erase. Private setup preview exposes Hold/Erase/Total, guide cue and eraser. Show/Hide persistent manual; Play/Replay timed. Unit selection private until Play/Show. Resource/mode/settings staged until Apply to room -> blank waiting then teacher Play/Show. Late join same phase/mask, no restart.
+Library filters category/topic/estimated CEFR/type/source/Draft-Published. Agent seeds Draft, teacher reviews content/phrases before Publish. No heatmaps/grades/fake metrics. Mock participants labelled sample.
+
+### 3. PROTOCOL & REASONING
+Read context and think hard before design. Coherent families: Library, Import/editor+phrase review, Setup, Live, Join/Waiting, Reader; Google sign-in compact state. Detailed Setup/Live at1440px and mobile Reader at390px are priorities. Show Hold/Erasing/Blank/Manual states and motion blueprint, not fake working animation.
+Use actual tool schemas, not guessed flags. If MCP absent, use injected orchestration ask with actionable blocker; coordinator may relay. Never silently substitute tools or claim artifacts exist. For timeout retain IDs/poll; don't resubmit identical generation.
+Ownership: modify ONLY assigned docs/design-review subfolder and your NEW remote project/file. Read existing docs/app, but NO edits to src/public/package/Firebase/PRD/DESIGN/spec or other worker folder. No commit/push, DB/cloud write, provision, deploy, secret dumps or further delegation.
+
+### 4. COMPLETION CONTRACT & EVALUATION RUBRIC
+Write report.md + manifest.json in assigned folder with real project/file URL and IDs, screen/artboard dimensions/IDs, available screenshot/HTML/JSX exports, deviations/pending calls/unapplied logo/unverified checks, motion blueprint and existing component mapping.
+Individual pass/fail/unverified: English; red/book; independent mode/highlight; exact spans; both timing policies; separate Show/Hide; Apply waits; link/name; Draft review; no learner playback; desktop/mobile; actual remote IDs. No fabricated pass/build/auth evidence.
+Read coordinator follow-ups at checkpoints. Finish with exact injected worker_done (3-sentence summary, report path, actual modified files, explicit outcome). Succeeded only when required real design artifacts exist, otherwise failed with blocker.
+ASSIGNED: Paper MCP. Discover get_guide topic paper-mcp-instructions before other Paper tools. Create NEW file "Chunks reading - Red book redesign - Paper candidate". Never overwrite user canvas. Bind explicit fileId/pageId, build incrementally via native tokens/create_artboard/write_html, screenshot/get_jsx for checks/exports, finish_working_on_nodes at end. Allowed local output C:/Users/gensh/Desktop/CHUNKS/PROJECT/Chunks-reading/docs/design-review/paper/.

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Answer me with HTML 0.4.9">
-<title>Chunks reading</title>
+<title>Chunks reading — Flow mới</title>
 <style>
 html[data-theme="blueprint"], html[data-theme="blueprint"][data-mode="light"] {
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -626,95 +626,88 @@ html[data-theme="agent-skill"] .am-layer-empty { color: var(--ink-2); margin: 0;
 <button class="am-btn" type="button" data-am="copy" data-done="Đã sao chép ✓">Sao chép nguồn</button>
 </div>
 <main class="am-doc">
-<header class="am-head"><h1>Chunks reading</h1><p class="am-sub">Một lớp học. Một nhịp đọc. Hai giao diện.</p><div class="am-intro am-md"><div class="am-md"><p><strong>Đã chốt sản phẩm; có prototype React/Vite, production backend chưa xác minh.</strong> Nền tảng trợ giảng, không kiểm tra/chấm điểm. Brand app: CHUNKS đỏ, phong cách sách và chuyển động gọn đẹp. UI và bài đọc đều tiếng Anh; khoảng 20 học viên/phòng.</p>
-<p>Cải thiện codebase hiện tại theo DESIGN.md bằng Antigravity; AI Studio là lựa chọn audit/import source theo checkpoint. Export Stitch local đã xóa, không phải đầu vào bắt buộc. Node.js + Firebase là hướng backend đề xuất, chưa phải hạ tầng production đã kiểm chứng.</p>
-<p>Đọc từ trên xuống để hiểu trách nhiệm từng lớp. Mở <strong>Xem chi tiết</strong> khi cần thông tin kỹ thuật.</p>
+<header class="am-head"><h1>Chunks reading — Flow mới</h1><p class="am-sub">Giữ codebase. Tôi phụ trách design và review; Antigravity triển khai theo từng lát cắt.</p><div class="am-intro am-md"><div class="am-md"><p><strong>Không cần quay lại tạo app mới bằng AI Studio.</strong> PRD/spec đã chốt; codebase hiện tại là điểm xuất phát.</p>
+<p>DESIGN.md mới là hợp đồng giao diện. Antigravity triển khai trực tiếp trên repo; AI Studio tùy chọn phải audit source đã import, không tạo lại app. Các export Stitch cũ đã xóa theo yêu cầu; không cần tái tạo chúng.</p>
 </div></div></header>
 <div class="am-doc-layout">
-<nav class="am-toc" aria-label="Mục lục"><a href="#panel-A">A · Kiến trúc từng lớp</a><a href="#panel-B">B · Một lần teacher nhấn “Bắt đầu”</a><a href="#panel-C">C · Ba nhóm cấu hình đọc</a><a href="#panel-D">D · Nhập bài mà không bị mắc kẹt</a><a href="#panel-E">E · Từ bản thiết kế đến lớp học thật</a><a href="#panel-F">F · Hợp đồng sản phẩm đã chốt</a></nav><div class="am-doc-body">
+<nav class="am-toc" aria-label="Mục lục"><a href="#panel-A">A · Ai chịu trách nhiệm gì?</a><a href="#panel-B">B · Trình tự mới</a><a href="#panel-C">C · Hiện tại đã làm được gì?</a><a href="#panel-D">D · Tôi phụ trách design như thế nào?</a><a href="#panel-E">E · Prompt sẽ đổi như thế nào?</a></nav><div class="am-doc-body">
 <section class="am-panel" id="panel-A">
-<header class="am-panel-head"><span class="am-panel-id">A</span><h2>Kiến trúc từng lớp</h2><span class="am-panel-meta">Đề xuất MVP</span></header>
-<div class="am-panel-body"><div class="am-layer-stack" role="group" aria-label="Kiến trúc Chunks reading theo trách nhiệm"><section class="am-layer" data-step="0" data-key="Người dùng"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">01</span><div><h3 class="am-layer-title">Người dùng</h3><p class="am-layer-sub">Ai điều khiển, ai theo dõi?</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 9-5 9 5-9 5-9-5Zm4 3v5c3 3 7 3 10 0v-5M21 8v8"/></svg><h4>Teacher</h4></div><span class="am-layer-tech">Chủ phòng</span><p>Chọn bài và điều khiển nhịp đọc.</p><details><summary>Xem chi tiết: Teacher</summary><div class="am-layer-detail">Teacher quản lý nội dung và phòng của mình. Không tự động có quyền xem dữ liệu teacher khác.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M17 5a3 3 0 0 1 0 6M21 21v-3a6 6 0 0 0-4-5"/></svg><h4>Học viên</h4></div><span class="am-layer-tech">Thành viên phòng</span><p>Mở link, nhập tên; xem cùng trạng thái lớp.</p><details><summary>Xem chi tiết: Học viên</summary><div class="am-layer-detail">Không đăng ký tài khoản hay chờ duyệt vào phòng. Identity kỹ thuật và membership vẫn phải xác minh; tên tự nhập không chứng minh danh tính.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Hai vai trò · hai giao diện</div><section class="am-layer" data-step="1" data-key="Giao diện"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">02</span><div><h3 class="am-layer-title">Giao diện</h3><p class="am-layer-sub">Browser hiển thị, không quyết định quyền</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 16v5"/></svg><h4>Teacher console</h4></div><span class="am-layer-tech">React + TypeScript</span><p>Thư viện, editor, setup và điều khiển lớp.</p><details><summary>Xem chi tiết: Teacher console</summary><div class="am-layer-detail">Có preview màn học viên, trước/sau, pause, resume, replay và kết thúc phòng.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v16M3 4c3-1 6-1 9 1 3-2 6-2 9-1v16c-3-1-6-1-9 1-3-2-6-2-9-1V4Z"/></svg><h4>Student reader</h4></div><span class="am-layer-tech">React + TypeScript</span><p>Chữ lớn, highlight và hiệu ứng đọc.</p><details><summary>Xem chi tiết: Student reader</summary><div class="am-layer-detail">Hiệu ứng chạy trên máy học viên theo mốc server. Không quay màn hình và không dùng camera theo dõi mắt.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Lệnh teacher → HTTPS → xác minh phía server</div><section class="am-layer" data-step="2" data-key="Backend và quyền"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">03</span><div><h3 class="am-layer-title">Backend và quyền</h3><p class="am-layer-sub">Nguồn xác thực lệnh điều khiển</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6h.01M7 17h.01M11 6h6M11 17h6"/></svg><h4>Room API</h4></div><span class="am-layer-tech">Node.js</span><p>Xác minh và ghi trạng thái phòng.</p><details><summary>Xem chi tiết: Room API</summary><div class="am-layer-detail">Kiểm tra identity, quyền sở hữu và membership. Học viên gọi API điều khiển trực tiếp vẫn phải bị từ chối.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4v5c0 5-5 8-9 10-4-2-9-5-9-10V7l9-4Z"/><path d="m8 12 3 3 5-6"/></svg><h4>Danh tính</h4></div><span class="am-layer-tech">Firebase Auth</span><p>Teacher đăng nhập Google qua Firebase.</p><details><summary>Xem chi tiết: Danh tính</summary><div class="am-layer-detail">Phân biệt chủ phòng và học viên; không tin role từ browser. Secrets, service credentials và API keys chỉ ở server.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Ghi hợp lệ · đọc realtime theo quyền</div><section class="am-layer" data-step="3" data-key="Dữ liệu và đồng bộ"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">04</span><div><h3 class="am-layer-title">Dữ liệu và đồng bộ</h3><p class="am-layer-sub">Giữ một trạng thái đọc chung</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 4 18 4 18 0V5M3 12c0 4 18 4 18 0"/></svg><h4>Nội dung bền vững</h4></div><span class="am-layer-tech">Firestore</span><p>Lưu resource phân loại, Draft/Published và phiên bản.</p><details><summary>Xem chi tiết: Nội dung bền vững</summary><div class="am-layer-detail">Agent seed trực tiếp Draft; teacher duyệt nội dung/cụm rồi publish. Chốt articleVersionId khi bắt đầu phiên. Sửa thư viện không làm đổi bài đang được lớp sử dụng.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7a9 9 0 0 0-15-3L2 7m0-5v5h5M4 17a9 9 0 0 0 15 3l3-3m0 5v-5h-5"/></svg><h4>Trạng thái phòng</h4></div><span class="am-layer-tech">Firestore listeners</span><p>Chia sẻ câu/đoạn, timing và tiến độ.</p><details><summary>Xem chi tiết: Trạng thái phòng</summary><div class="am-layer-detail">Snapshot gồm revision, unitIndex, status, startedAt và pausedElapsedMs. Client ước lượng lệch đồng hồ; reconnect lấy trạng thái hiện tại.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Dịch vụ hỗ trợ · không nằm trong từng frame hiệu ứng</div><section class="am-layer" data-step="4" data-key="Import và triển khai"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">05</span><div><h3 class="am-layer-title">Import và triển khai</h3><p class="am-layer-sub">Mở rộng nội dung, đưa ứng dụng lên web</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></svg><h4>Nhập bài và annotations</h4></div><span class="am-layer-tech">Server import · Gemini tùy chọn</span><p>Text, TXT, URL; teacher xem và duyệt.</p><details><summary>Xem chi tiết: Nhập bài và annotations</summary><div class="am-layer-detail">URL phải chặn nội mạng, kiểm tra redirect và giới hạn timeout/kích thước. Gemini chỉ gợi ý idioms/phrases; sai thì chỉnh tay.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19a5 5 0 0 1-1-10 7 7 0 0 1 13-2 6 6 0 0 1 0 12H6Z"/></svg><h4>Hosting</h4></div><span class="am-layer-tech">Cloud Run</span><p>Triển khai app do AI Studio tạo.</p><details><summary>Xem chi tiết: Hosting</summary><div class="am-layer-detail">Firebase lưu dữ liệu ngoài bộ nhớ server. Kiểm tra chi phí, secrets, phân quyền và quy mô lớp trước release.</div></details></article></div></section></div>
-<div class="am-md"><p><strong>Mũi tên giữa các lớp biểu thị ranh giới trách nhiệm.</strong> Lớp cuối là dịch vụ hỗ trợ, không phải bước bắt buộc của mọi request.</p>
-</div></div>
+<header class="am-panel-head"><span class="am-panel-id">A</span><h2>Ai chịu trách nhiệm gì?</h2><span class="am-panel-meta">Flow đề xuất</span></header>
+<div class="am-panel-body"><div class="am-layer-stack" role="group" aria-label="Quyền sở hữu công việc"><section class="am-layer" data-step="0" data-key="Hợp đồng"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">01</span><div><h3 class="am-layer-title">Hợp đồng</h3><p class="am-layer-sub">Chốt những gì phải đúng</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v16M3 4c3-1 6-1 9 1 3-2 6-2 9-1v16c-3-1-6-1-9 1-3-2-6-2-9-1V4Z"/></svg><h4>PRD + Spec</h4></div><span class="am-layer-tech">Đã chốt sản phẩm</span><p>Giữ yêu cầu và tiêu chí nghiệm thu.</p><details><summary>Xem chi tiết: PRD + Spec</summary><div class="am-layer-detail">Code hiện tại không thay thế spec. Chi tiết hạ tầng chưa xác minh vẫn được ghi là mở.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Đánh giá code trước khi giao việc</div><section class="am-layer" data-step="1" data-key="Design"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">02</span><div><h3 class="am-layer-title">Design</h3><p class="am-layer-sub">Tôi phụ trách hướng thiết kế</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 16v5"/></svg><h4>UI và motion</h4></div><span class="am-layer-tech">DESIGN.md + preview thực</span><p>CHUNKS đỏ, sách và trạng thái.</p><details><summary>Xem chi tiết: UI và motion</summary><div class="am-layer-detail">Agent tự cải thiện Teacher Setup/Live và Learner Reader trên source hiện tại; kiểm chứng motion thực.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Chốt ticket và test seam, xem UI thực trước khi mở rộng</div><section class="am-layer" data-step="2" data-key="Implementation"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">03</span><div><h3 class="am-layer-title">Implementation</h3><p class="am-layer-sub">Một chủ sở hữu cho mỗi nhóm file</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6-5 6 5 6m10-12 5 6-5 6M14 3l-4 18"/></svg><h4>Antigravity</h4></div><span class="am-layer-tech">Repo hiện tại</span><p>Implement từng ticket có test gate.</p><details><summary>Xem chi tiết: Antigravity</summary><div class="am-layer-detail">Tôi có thể patch frontend hoặc giao agent port design. Không cùng sửa một file với Antigravity; backend/Firebase có phạm vi riêng.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Diff và evidence, không chỉ ảnh đẹp</div><section class="am-layer" data-step="3" data-key="Verification"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">04</span><div><h3 class="am-layer-title">Verification</h3><p class="am-layer-sub">Tôi đối chiếu kết quả</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4v5c0 5-5 8-9 10-4-2-9-5-9-10V7l9-4Z"/><path d="m8 12 3 3 5-6"/></svg><h4>Review + kiểm thử</h4></div><span class="am-layer-tech">Standards và Spec</span><p>Ghi Done/Partial/Missing/Unverified bằng bằng chứng.</p><details><summary>Xem chi tiết: Review + kiểm thử</summary><div class="am-layer-detail">Review code, test timeline, browser, API/data và quyền. Không coi Firebase SDK hoặc build pass là backend hoàn thiện.</div></details></article></div></section></div></div>
 </section>
 <section class="am-panel" id="panel-B">
-<header class="am-panel-head"><span class="am-panel-id">B</span><h2>Một lần teacher nhấn “Bắt đầu”</h2><span class="am-panel-meta">Luồng thực tế</span></header>
-<div class="am-panel-body"><figure class="am-diagram am-seq"><svg viewBox="0 0 994 364" width="994" height="364" role="img" aria-label="Sơ đồ tuần tự: Teacher, Node API, Firebase Auth, Firestore, Học viên, Browser" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><line class="am-lifeline" x1="54" y1="42" x2="54" y2="360"/><g data-key="Teacher"><rect class="am-actor" x="12" y="8" width="84" height="34" rx="2"/><text x="54" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Teacher</text></g><line class="am-lifeline" x1="204" y1="42" x2="204" y2="360"/><g data-key="Node API"><rect class="am-actor" x="161.7" y="8" width="84.4" height="34" rx="2"/><text x="204" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Node API</text></g><line class="am-lifeline" x1="344.8" y1="42" x2="344.8" y2="360"/><g data-key="Firebase Auth"><rect class="am-actor" x="288.3" y="8" width="113" height="34" rx="2"/><text x="344.8" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Firebase Auth</text></g><line class="am-lifeline" x1="471.3" y1="42" x2="471.3" y2="360"/><g data-key="Firestore"><rect class="am-actor" x="429.3" y="8" width="84" height="34" rx="2"/><text x="471.3" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Firestore</text></g><line class="am-lifeline" x1="722.7" y1="42" x2="722.7" y2="360"/><g data-key="Học viên"><rect class="am-actor" x="680.7" y="8" width="84" height="34" rx="2"/><text x="722.7" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Học viên</text></g><line class="am-lifeline" x1="939.7" y1="42" x2="939.7" y2="360"/><g data-key="Browser"><rect class="am-actor" x="897.7" y="8" width="84" height="34" rx="2"/><text x="939.7" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Browser</text></g><g data-step="0"><text x="129" y="70" text-anchor="middle">Bắt đầu đơn vị đọc</text><path class="am-edge" d="M54,80 L202,80" marker-end="url(#am1-arrow)"/><text class="am-step" x="60" y="74" text-anchor="start">1</text></g><g data-step="1"><text x="274.4" y="110" text-anchor="middle">Xác minh identity</text><path class="am-edge" d="M204,120 L342.8,120" marker-end="url(#am1-arrow)"/><text class="am-step" x="210" y="114" text-anchor="start">2</text></g><g data-step="2"><text x="337.6" y="150" text-anchor="middle">Kiểm tra quyền và ghi snapshot</text><path class="am-edge" d="M204,160 L469.3,160" marker-end="url(#am1-arrow)"/><text class="am-step" x="210" y="154" text-anchor="start">3</text></g><g data-step="3"><text x="597" y="190" text-anchor="middle">Snapshot mới qua listener được cấp</text><text x="597" y="206" text-anchor="middle">quyền</text><path class="am-edge am-edge--dashed" d="M471.3,216 L720.7,216" marker-end="url(#am1-arrow)"/><text class="am-step" x="477.3" y="210" text-anchor="start">4</text></g><g data-step="4"><rect class="am-note" x="622.1" y="240" width="201.2" height="28" rx="2"/><text x="722.7" y="254" text-anchor="middle" dominant-baseline="central" font-size="12">Nhận mốc server; tự tính tiến độ</text></g><g data-step="5"><line class="am-lifeline" x1="12" y1="294" x2="981.7" y2="294"/><rect class="am-actor" x="442.5" y="284" width="108.8" height="20" rx="2"/><text x="496.9" y="294" text-anchor="middle" dominant-baseline="central" font-size="12">Tại mỗi thiết bị</text></g><g data-step="6"><text x="831.2" y="324" text-anchor="middle">Hiển thị chữ và chạy hiệu ứng</text><path class="am-edge" d="M722.7,334 L937.7,334" marker-end="url(#am1-arrow)"/><text class="am-step" x="728.7" y="328" text-anchor="start">5</text></g></svg></figure>
-<div class="am-md"><ul>
-<li>Backend tăng <code>revision</code> để nhận biết trạng thái mới.</li>
-<li>Không gửi sự kiện cho từng từ hoặc từng frame.</li>
-<li>Vào muộn hoặc reconnect: lấy snapshot hiện tại, không đọc lại từ đầu.</li>
-<li>Mất mạng: báo trạng thái và chờ đồng bộ, không giả vờ đang kết nối.</li>
-</ul>
+<header class="am-panel-head"><span class="am-panel-id">B</span><h2>Trình tự mới</h2></header>
+<div class="am-panel-body"><ol class="am-timeline am-timeline--v"><li class="am-tl-item"><span class="am-tl-when">01</span><span class="am-tl-dot"></span><span class="am-tl-title">Audit baseline</span><span class="am-tl-text">Map spec vào code, chụp UI và ghi lỗi; chưa redesign mù.</span></li><li class="am-tl-item"><span class="am-tl-when">02</span><span class="am-tl-dot"></span><span class="am-tl-title">Design trên app hiện có</span><span class="am-tl-text">Layout, token đỏ, controls, mobile và motion states.</span></li><li class="am-tl-item"><span class="am-tl-when">03</span><span class="am-tl-dot"></span><span class="am-tl-title">Chốt ticket và seam</span><span class="am-tl-text">Agent cải thiện UI theo DESIGN.md; xem kết quả thực, không rebuild tất cả.</span></li><li class="am-tl-item"><span class="am-tl-when">04</span><span class="am-tl-dot"></span><span class="am-tl-title">Implement có ranh giới</span><span class="am-tl-text">Antigravity dùng prompt repo-aware, giữ route/component có ích.</span></li><li class="am-tl-item"><span class="am-tl-when">05</span><span class="am-tl-dot"></span><span class="am-tl-title">Review và sửa</span><span class="am-tl-text">So Standards và Spec; chạy test, browser và kiểm tra data.</span></li><li class="am-tl-item"><span class="am-tl-when">06</span><span class="am-tl-dot"></span><span class="am-tl-title">Mở rộng và release</span><span class="am-tl-text">Library/review/seed, Auth/realtime; deploy chỉ khi được duyệt.</span></li></ol>
+<div class="am-md"><p><strong>Hai luồng riêng:</strong> visual có thể dùng mock rõ nhãn; tính năng chỉ Done sau kiểm chứng behavior/backend.</p>
+<p>Không bật deploy hay ghi production trong prompt design. Không cho hai agent sửa đồng thời cùng file.</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-C">
-<header class="am-panel-head"><span class="am-panel-id">C</span><h2>Ba nhóm cấu hình đọc</h2><span class="am-panel-meta">Đã chốt</span></header>
-<div class="am-panel-body"><div class="am-layer-stack" role="group" aria-label="Cấu hình đọc độc lập"><section class="am-layer" data-step="0" data-key="Chia nội dung"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">01</span><div><h3 class="am-layer-title">Chia nội dung</h3><p class="am-layer-sub">Học viên thấy bao nhiêu chữ?</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v16M3 4c3-1 6-1 9 1 3-2 6-2 9-1v16c-3-1-6-1-9 1-3-2-6-2-9-1V4Z"/></svg><h4>Câu</h4></div><span class="am-layer-tech">Sentence</span><p>Hiển thị một câu mỗi lần.</p></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v16M3 4c3-1 6-1 9 1 3-2 6-2 9-1v16c-3-1-6-1-9 1-3-2-6-2-9-1V4Z"/></svg><h4>Đoạn</h4></div><span class="am-layer-tech">Paragraph</span><p>Hiển thị một đoạn mỗi lần.</p></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Kết hợp lớp nhấn mạnh</div><section class="am-layer" data-step="1" data-key="Highlight"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">02</span><div><h3 class="am-layer-title">Highlight</h3><p class="am-layer-sub">Chú ý đến cách dùng tiếng Anh</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3 3-6Z"/></svg><h4>Phát hiện và highlight cụm</h4></div><span class="am-layer-tech">Dictionary + AI</span><p>Chỉ tô đúng cụm như “long story short”.</p><details><summary>Xem chi tiết: Phát hiện và highlight cụm</summary><div class="am-layer-detail">Xử lý dữ liệu hoặc AI tạo candidate. Teacher duyệt; lưu exact spans. Không tô toàn câu/đoạn. Manual review vẫn dùng được khi AI lỗi.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Chọn nhịp và hiệu ứng</div><section class="am-layer" data-step="2" data-key="Timing và hiệu ứng"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">03</span><div><h3 class="am-layer-title">Timing và hiệu ứng</h3><p class="am-layer-sub">Chữ tồn tại và biến mất thế nào?</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h4>Hold then erase</h4></div><span class="am-layer-tech">Mặc định</span><p>Hiện đầy đủ 3 giây, sau đó xóa trong 1 giây.</p><details><summary>Xem chi tiết: Hold then erase</summary><div class="am-layer-detail">Teacher chỉnh thời gian đọc/xóa và xem animation preview. Tới giây thứ 4 mới hết chữ; không ép hết ở giây thứ 3.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 15 9-11a2 2 0 0 1 3 0l5 5a2 2 0 0 1 0 3l-8 9H8l-4-4a2 2 0 0 1 0-2Zm5-6 9 8M13 21h9"/></svg><h4>Erase within window</h4></div><span class="am-layer-tech">Lựa chọn thứ hai</span><p>Tổng 3 giây: hiện 2 giây, xóa trong giây cuối.</p><details><summary>Xem chi tiết: Erase within window</summary><div class="am-layer-detail">Điểm dẫn đọc/cục gôm đi theo dòng; không theo dõi mắt thật. Hai policy có deadline riêng. Late join theo cùng phase và mask progress.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v16M3 4c3-1 6-1 9 1 3-2 6-2 9-1v16c-3-1-6-1-9 1-3-2-6-2-9-1V4Z"/></svg><h4>Show / Hide</h4></div><span class="am-layer-tech">Thủ công</span><p>Hiện cố định để giải thích; Hide mới ẩn.</p><details><summary>Xem chi tiết: Show / Hide</summary><div class="am-layer-detail">Tách khỏi Play/Replay có thời gian. Resource/mode/settings mới cần Apply to room: về trang trống, rồi teacher Play/Show. Sentence/Paragraph độc lập với bật/tắt highlight.</div></details></article></div></section></div></div>
-</section>
-<section class="am-panel" id="panel-D">
-<header class="am-panel-head"><span class="am-panel-id">D</span><h2>Nhập bài mà không bị mắc kẹt</h2><span class="am-panel-meta">Phạm vi đã chốt</span></header>
-<div class="am-panel-body"><ol class="am-timeline am-timeline--v"><li class="am-tl-item"><span class="am-tl-when">01</span><span class="am-tl-dot"></span><span class="am-tl-title">Nguồn</span><span class="am-tl-text">News, TED transcript hoặc bài truyền cảm hứng.</span></li><li class="am-tl-item"><span class="am-tl-when">02</span><span class="am-tl-dot"></span><span class="am-tl-title">Import MVP</span><span class="am-tl-text">Dán text, TXT hoặc URL công khai có thể truy cập.</span></li><li class="am-tl-item"><span class="am-tl-when">03</span><span class="am-tl-dot"></span><span class="am-tl-title">Preview và sửa</span><span class="am-tl-text">Teacher kiểm tra nội dung, nguồn, câu và đoạn.</span></li><li class="am-tl-item"><span class="am-tl-when">04</span><span class="am-tl-dot"></span><span class="am-tl-title">Duyệt cụm từ</span><span class="am-tl-text">Chỉnh tay hoặc duyệt gợi ý Gemini.</span></li><li class="am-tl-item"><span class="am-tl-when">05</span><span class="am-tl-dot"></span><span class="am-tl-title">Publish và dùng</span><span class="am-tl-text">Duyệt Draft; phân loại chủ đề/trình độ/loại nguồn; chốt phiên bản khi mở lớp.</span></li></ol>
-<div class="am-md"><p><strong>Agent seed:</strong> ghi trực tiếp database dưới trạng thái Draft. Lưu nguồn, quyền sử dụng và phân loại. Teacher duyệt trước publish. Hướng dẫn: <a href="resource-seeding.md">Resource seeding</a>. Chưa có seed script hay database thật đã xác minh.</p>
-<p><strong>Fallback:</strong> URL không lấy được → dán text. Không hứa đọc mọi TED/video URL hoặc vượt paywall.</p>
-<p>PDF/DOCX đề xuất ở giai đoạn sau. PDF scan cần OCR; video cần transcription và kiểm tra quyền sử dụng.</p>
-</div></div>
-</section>
-<section class="am-panel" id="panel-E">
-<header class="am-panel-head"><span class="am-panel-id">E</span><h2>Từ bản thiết kế đến lớp học thật</h2><span class="am-panel-meta">Không dùng mega-prompt</span></header>
-<div class="am-panel-body"><ol class="am-timeline am-timeline--v"><li class="am-tl-item"><span class="am-tl-when">01</span><span class="am-tl-dot"></span><span class="am-tl-title">Chốt PRD</span><span class="am-tl-text">Quyền, mode, timing, reconnect và tiêu chí nghiệm thu.</span></li><li class="am-tl-item"><span class="am-tl-when">02</span><span class="am-tl-dot"></span><span class="am-tl-title">Audit + ticket/seam</span><span class="am-tl-text">Đọc source và DESIGN.md, chốt lát cắt đầu với test gate.</span></li><li class="am-tl-item"><span class="am-tl-when">03</span><span class="am-tl-dot"></span><span class="am-tl-title">Cải thiện tại chỗ</span><span class="am-tl-text">Teacher Setup/Live, Join/Reader và motion thực; fixture demo có nhãn.</span></li><li class="am-tl-item"><span class="am-tl-when">04</span><span class="am-tl-dot"></span><span class="am-tl-title">Backend thật</span><span class="am-tl-text">Auth, lưu bài, room, realtime; thử trên hai thiết bị.</span></li><li class="am-tl-item"><span class="am-tl-when">05</span><span class="am-tl-dot"></span><span class="am-tl-title">Import và kiểm thử</span><span class="am-tl-text">URL lỗi có fallback; annotation sai có chỉnh tay.</span></li><li class="am-tl-item"><span class="am-tl-when">06</span><span class="am-tl-dot"></span><span class="am-tl-title">Release gate</span><span class="am-tl-text">Kiểm tra secrets, quyền, chi phí và số học viên mục tiêu.</span></li></ol>
-<div class="am-md"><p><strong>Phong cách app:</strong> đọc sách, nền giấy ngà, chữ mực, serif cho bài đọc. UI và nội dung bài đều tiếng Anh.</p>
-<p>Theme của tài liệu này không thay thế brand của app.</p>
-<p><strong>Logo app:</strong> <code>assets/logo.png</code>. Attach asset cùng source cho AI Studio; đường dẫn local không phải URL công khai.</p>
-</div></div>
-</section>
-<section class="am-panel" id="panel-F">
-<header class="am-panel-head"><span class="am-panel-id">F</span><h2>Hợp đồng sản phẩm đã chốt</h2></header>
+<header class="am-panel-head"><span class="am-panel-id">C</span><h2>Hiện tại đã làm được gì?</h2><span class="am-panel-meta">Static audit + build</span></header>
 <div class="am-panel-body"><div class="am-md"><div class="am-table-wrap"><table>
 <thead>
 <tr>
-<th>Nội dung</th>
-<th>Trạng thái</th>
+<th>Nhóm</th>
+<th>Đánh giá</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Highlight</td>
-<td>Đã chốt: detect và tô exact phrase, không tô cả câu/đoạn</td>
+<td>React/Vite, TeacherView, StudentView</td>
+<td>Có prototype; build pass</td>
 </tr>
 <tr>
-<td>Thời gian</td>
-<td>Mặc định giữ 3s + xóa 1s; tùy chọn tổng 3s có 1s xóa cuối</td>
+<td>Sentence/Paragraph và toggle highlight</td>
+<td>Có UI; hành vi mới chưa đủ</td>
 </tr>
 <tr>
-<td>Quy mô</td>
-<td>Đã chốt: khoảng 20 học viên/phòng; cần load test</td>
+<td>Paper/serif</td>
+<td>Có nền tảng; chưa đúng CHUNKS đỏ/English UI</td>
 </tr>
 <tr>
-<td>Ngôn ngữ</td>
-<td>Đã chốt: UI tiếng Anh, bài tiếng Anh</td>
+<td>Timing 3s/1s, expiry và Show/Hide</td>
+<td>Chưa đúng; eraser đang lặp</td>
 </tr>
 <tr>
-<td>Học viên vào phòng</td>
-<td>Link + tên, không đăng ký; late join cùng trạng thái hiện tại</td>
+<td>Apply to room và private navigation</td>
+<td>Chưa có</td>
 </tr>
 <tr>
-<td>Sau khi xóa</td>
-<td>Trang trống chờ teacher; giáo viên chuyển thủ công</td>
+<td>Auth, join/presence và realtime</td>
+<td>SDK/config có; flow thật chưa có trong code đã đọc</td>
 </tr>
 <tr>
-<td>Teacher</td>
-<td>Google sign-in qua Firebase; toàn quyền phòng của mình</td>
+<td>Library Draft/Published, review và seed</td>
+<td>Có hợp đồng docs; chưa có implementation</td>
 </tr>
 <tr>
-<td>Import MVP</td>
-<td>Text/TXT/URL; agent seed Draft trực tiếp database; PDF/DOCX sau</td>
+<td>Mobile, quyền và 20 learners</td>
+<td>Chưa kiểm chứng</td>
 </tr>
 </tbody></table></div>
-<p><strong>Trạng thái:</strong> prototype từng build pass trong audit; chưa xác minh production Auth/backend/rules/realtime hoặc deploy. Export Stitch local đã xóa; remote project không bị xóa. Xem <a href="aistudio-handoff.md">handoff hiện hành</a>.</p>
-<p>Xem yêu cầu chi tiết tại <a href="PRD.md">PRD</a>, visual contract tại <a href="../DESIGN.md">DESIGN.md</a>.</p>
-<p><strong>Cơ sở:</strong> yêu cầu của bạn và tài liệu Google về <a href="https://ai.google.dev/gemini-api/docs/aistudio-build-mode">AI Studio Build</a>, <a href="https://ai.google.dev/gemini-api/docs/aistudio-fullstack">full-stack</a>.</p>
-<p>Bản <code>docs/architecture-proposal.md</code> là lịch sử, không phải hợp đồng hiện tại. PRD và DESIGN.md là nguồn chuẩn; lựa chọn triển khai cloud còn cần xác minh.</p>
+<p>Bằng chứng và vị trí code: <a href="spec-coverage-baseline.md">Spec coverage baseline</a>.</p>
+<p>Không báo phần trăm hoàn thành khi chưa có acceptance evidence.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-D">
+<header class="am-panel-head"><span class="am-panel-id">D</span><h2>Tôi phụ trách design như thế nào?</h2></header>
+<div class="am-panel-body"><div class="am-md"><ol>
+<li>Đọc code và chụp giao diện desktop/mobile hiện tại.</li>
+<li>Thiết kế Teacher Setup/Live và Learner Reader theo DESIGN.md.</li>
+<li>Agent cải thiện layout theo DESIGN.md; dùng preview thực cho eraser và reading guide.</li>
+<li>Chốt ticket/test seam rồi implement; bạn xem UI thật để góp ý trước khi mở rộng.</li>
+<li>Agent implement; tôi review diff, browser và từng tiêu chí spec.</li>
+</ol>
+<p>Motion phải có Hold, Erasing, Blank waiting và Manual Show. Default giữ 3s rồi xóa 1s.</p>
+<p>Within-window tổng 3s, xóa trong giây cuối. Pause/resume và late join phải giữ đúng phase.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-E">
+<header class="am-panel-head"><span class="am-panel-id">E</span><h2>Prompt sẽ đổi như thế nào?</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>Prompt AI Studio đã cập nhật theo PRD/spec hiện tại. Chạy <a href="prompts/aistudio-audit.md">audit source</a> trước. Dùng <a href="prompts/aistudio-first-checkpoint.md">checkpoint đầu</a> sau khi duyệt kế hoạch. Không phụ thuộc Stitch hay ZIP chưa tồn tại.</p>
+<p>Prompt Antigravity phải chỉ rõ baseline, phạm vi file, những gì giữ nguyên, tiêu chí spec và test gate. Mỗi ticket trả diff, lệnh test, ảnh và giới hạn chưa xác minh.</p>
+<p><strong>Bước kế tiếp:</strong> dùng <a href="prompts/antigravity-redesign-and-backend.md">prompt Antigravity</a>, hoặc <a href="aistudio-handoff.md">handoff AI Studio</a>, với cùng source/PRD/spec. Không để hai agent cùng sửa một nhóm file.</p>
+<p>Trang này là kế hoạch triển khai. Hai task design lịch sử chưa đạt gate đầy đủ; export Stitch local đã xóa. Chưa chạy implementation Antigravity/AI Studio, chưa có backend hoàn thiện hoặc deploy.</p>
+<p>HTML đã render; keyboard, contrast và reflow của trang mới chưa kiểm tra trong browser.</p>
 </div></div>
 </section>
 </div>
@@ -722,131 +715,88 @@ html[data-theme="agent-skill"] .am-layer-empty { color: var(--ink-2); margin: 0;
 </main>
 <footer class="am-colophon">Generated by Answer me with HTML 0.4.9 · 2026-10-07 19:45</footer>
 <textarea id="am-source" hidden readonly aria-hidden="true">---
-title: Chunks reading
-subtitle: Một lớp học. Một nhịp đọc. Hai giao diện.
+title: Chunks reading — Flow mới
+subtitle: Giữ codebase. Tôi phụ trách design và review; Antigravity triển khai theo từng lát cắt.
 lang: vi
 template: doc
 theme: agent-skill
 mode: light
 ---
-**Đã chốt sản phẩm; có prototype React/Vite, production backend chưa xác minh.** Nền tảng trợ giảng, không kiểm tra/chấm điểm. Brand app: CHUNKS đỏ, phong cách sách và chuyển động gọn đẹp. UI và bài đọc đều tiếng Anh; khoảng 20 học viên/phòng.
+**Không cần quay lại tạo app mới bằng AI Studio.** PRD/spec đã chốt; codebase hiện tại là điểm xuất phát.
 
-Cải thiện codebase hiện tại theo DESIGN.md bằng Antigravity; AI Studio là lựa chọn audit/import source theo checkpoint. Export Stitch local đã xóa, không phải đầu vào bắt buộc. Node.js + Firebase là hướng backend đề xuất, chưa phải hạ tầng production đã kiểm chứng.
+DESIGN.md mới là hợp đồng giao diện. Antigravity triển khai trực tiếp trên repo; AI Studio tùy chọn phải audit source đã import, không tạo lại app. Các export Stitch cũ đã xóa theo yêu cầu; không cần tái tạo chúng.
 
-Đọc từ trên xuống để hiểu trách nhiệm từng lớp. Mở **Xem chi tiết** khi cần thông tin kỹ thuật.
+## A Ai chịu trách nhiệm gì? {meta=&quot;Flow đề xuất&quot;}
 
-## A Kiến trúc từng lớp {meta=&quot;Đề xuất MVP&quot;}
-
-```layers Kiến trúc Chunks reading theo trách nhiệm
-# Người dùng | Ai điều khiển, ai theo dõi?
-teacher | Teacher | Chủ phòng | Chọn bài và điều khiển nhịp đọc. | Teacher quản lý nội dung và phòng của mình. Không tự động có quyền xem dữ liệu teacher khác.
-users | Học viên | Thành viên phòng | Mở link, nhập tên; xem cùng trạng thái lớp. | Không đăng ký tài khoản hay chờ duyệt vào phòng. Identity kỹ thuật và membership vẫn phải xác minh; tên tự nhập không chứng minh danh tính.
-&gt; Hai vai trò · hai giao diện
-# Giao diện | Browser hiển thị, không quyết định quyền
-monitor | Teacher console | React + TypeScript | Thư viện, editor, setup và điều khiển lớp. | Có preview màn học viên, trước/sau, pause, resume, replay và kết thúc phòng.
-book | Student reader | React + TypeScript | Chữ lớn, highlight và hiệu ứng đọc. | Hiệu ứng chạy trên máy học viên theo mốc server. Không quay màn hình và không dùng camera theo dõi mắt.
-&gt; Lệnh teacher → HTTPS → xác minh phía server
-# Backend và quyền | Nguồn xác thực lệnh điều khiển
-server | Room API | Node.js | Xác minh và ghi trạng thái phòng. | Kiểm tra identity, quyền sở hữu và membership. Học viên gọi API điều khiển trực tiếp vẫn phải bị từ chối.
-shield | Danh tính | Firebase Auth | Teacher đăng nhập Google qua Firebase. | Phân biệt chủ phòng và học viên; không tin role từ browser. Secrets, service credentials và API keys chỉ ở server.
-&gt; Ghi hợp lệ · đọc realtime theo quyền
-# Dữ liệu và đồng bộ | Giữ một trạng thái đọc chung
-database | Nội dung bền vững | Firestore | Lưu resource phân loại, Draft/Published và phiên bản. | Agent seed trực tiếp Draft; teacher duyệt nội dung/cụm rồi publish. Chốt articleVersionId khi bắt đầu phiên. Sửa thư viện không làm đổi bài đang được lớp sử dụng.
-sync | Trạng thái phòng | Firestore listeners | Chia sẻ câu/đoạn, timing và tiến độ. | Snapshot gồm revision, unitIndex, status, startedAt và pausedElapsedMs. Client ước lượng lệch đồng hồ; reconnect lấy trạng thái hiện tại.
-&gt; Dịch vụ hỗ trợ · không nằm trong từng frame hiệu ứng
-# Import và triển khai | Mở rộng nội dung, đưa ứng dụng lên web
-import | Nhập bài và annotations | Server import · Gemini tùy chọn | Text, TXT, URL; teacher xem và duyệt. | URL phải chặn nội mạng, kiểm tra redirect và giới hạn timeout/kích thước. Gemini chỉ gợi ý idioms/phrases; sai thì chỉnh tay.
-cloud | Hosting | Cloud Run | Triển khai app do AI Studio tạo. | Firebase lưu dữ liệu ngoài bộ nhớ server. Kiểm tra chi phí, secrets, phân quyền và quy mô lớp trước release.
+```layers Quyền sở hữu công việc
+# Hợp đồng | Chốt những gì phải đúng
+book | PRD + Spec | Đã chốt sản phẩm | Giữ yêu cầu và tiêu chí nghiệm thu. | Code hiện tại không thay thế spec. Chi tiết hạ tầng chưa xác minh vẫn được ghi là mở.
+&gt; Đánh giá code trước khi giao việc
+# Design | Tôi phụ trách hướng thiết kế
+monitor | UI và motion | DESIGN.md + preview thực | CHUNKS đỏ, sách và trạng thái. | Agent tự cải thiện Teacher Setup/Live và Learner Reader trên source hiện tại; kiểm chứng motion thực.
+&gt; Chốt ticket và test seam, xem UI thực trước khi mở rộng
+# Implementation | Một chủ sở hữu cho mỗi nhóm file
+code | Antigravity | Repo hiện tại | Implement từng ticket có test gate. | Tôi có thể patch frontend hoặc giao agent port design. Không cùng sửa một file với Antigravity; backend/Firebase có phạm vi riêng.
+&gt; Diff và evidence, không chỉ ảnh đẹp
+# Verification | Tôi đối chiếu kết quả
+shield | Review + kiểm thử | Standards và Spec | Ghi Done/Partial/Missing/Unverified bằng bằng chứng. | Review code, test timeline, browser, API/data và quyền. Không coi Firebase SDK hoặc build pass là backend hoàn thiện.
 ```
 
-**Mũi tên giữa các lớp biểu thị ranh giới trách nhiệm.** Lớp cuối là dịch vụ hỗ trợ, không phải bước bắt buộc của mọi request.
-
-## B Một lần teacher nhấn “Bắt đầu” {meta=&quot;Luồng thực tế&quot;}
-
-```sequence num
-Teacher -&gt; Node API: Bắt đầu đơn vị đọc
-Node API -&gt; Firebase Auth: Xác minh identity
-Node API -&gt; Firestore: Kiểm tra quyền và ghi snapshot
-Firestore --&gt; Học viên: Snapshot mới qua listener được cấp quyền
-note Học viên: Nhận mốc server; tự tính tiến độ
-== Tại mỗi thiết bị ==
-Học viên -&gt; Browser: Hiển thị chữ và chạy hiệu ứng
-```
-
-- Backend tăng `revision` để nhận biết trạng thái mới.
-- Không gửi sự kiện cho từng từ hoặc từng frame.
-- Vào muộn hoặc reconnect: lấy snapshot hiện tại, không đọc lại từ đầu.
-- Mất mạng: báo trạng thái và chờ đồng bộ, không giả vờ đang kết nối.
-
-## C Ba nhóm cấu hình đọc {meta=&quot;Đã chốt&quot;}
-
-```layers Cấu hình đọc độc lập
-# Chia nội dung | Học viên thấy bao nhiêu chữ?
-book | Câu | Sentence | Hiển thị một câu mỗi lần.
-book | Đoạn | Paragraph | Hiển thị một đoạn mỗi lần.
-&gt; Kết hợp lớp nhấn mạnh
-# Highlight | Chú ý đến cách dùng tiếng Anh
-spark | Phát hiện và highlight cụm | Dictionary + AI | Chỉ tô đúng cụm như “long story short”. | Xử lý dữ liệu hoặc AI tạo candidate. Teacher duyệt; lưu exact spans. Không tô toàn câu/đoạn. Manual review vẫn dùng được khi AI lỗi.
-&gt; Chọn nhịp và hiệu ứng
-# Timing và hiệu ứng | Chữ tồn tại và biến mất thế nào?
-clock | Hold then erase | Mặc định | Hiện đầy đủ 3 giây, sau đó xóa trong 1 giây. | Teacher chỉnh thời gian đọc/xóa và xem animation preview. Tới giây thứ 4 mới hết chữ; không ép hết ở giây thứ 3.
-eraser | Erase within window | Lựa chọn thứ hai | Tổng 3 giây: hiện 2 giây, xóa trong giây cuối. | Điểm dẫn đọc/cục gôm đi theo dòng; không theo dõi mắt thật. Hai policy có deadline riêng. Late join theo cùng phase và mask progress.
-book | Show / Hide | Thủ công | Hiện cố định để giải thích; Hide mới ẩn. | Tách khỏi Play/Replay có thời gian. Resource/mode/settings mới cần Apply to room: về trang trống, rồi teacher Play/Show. Sentence/Paragraph độc lập với bật/tắt highlight.
-```
-
-## D Nhập bài mà không bị mắc kẹt {meta=&quot;Phạm vi đã chốt&quot;}
+## B Trình tự mới
 
 ```timeline v
-01 | Nguồn | News, TED transcript hoặc bài truyền cảm hứng.
-02 | Import MVP | Dán text, TXT hoặc URL công khai có thể truy cập.
-03 | Preview và sửa | Teacher kiểm tra nội dung, nguồn, câu và đoạn.
-04 | Duyệt cụm từ | Chỉnh tay hoặc duyệt gợi ý Gemini.
-05 | Publish và dùng | Duyệt Draft; phân loại chủ đề/trình độ/loại nguồn; chốt phiên bản khi mở lớp.
+01 | Audit baseline | Map spec vào code, chụp UI và ghi lỗi; chưa redesign mù.
+02 | Design trên app hiện có | Layout, token đỏ, controls, mobile và motion states.
+03 | Chốt ticket và seam | Agent cải thiện UI theo DESIGN.md; xem kết quả thực, không rebuild tất cả.
+04 | Implement có ranh giới | Antigravity dùng prompt repo-aware, giữ route/component có ích.
+05 | Review và sửa | So Standards và Spec; chạy test, browser và kiểm tra data.
+06 | Mở rộng và release | Library/review/seed, Auth/realtime; deploy chỉ khi được duyệt.
 ```
 
-**Agent seed:** ghi trực tiếp database dưới trạng thái Draft. Lưu nguồn, quyền sử dụng và phân loại. Teacher duyệt trước publish. Hướng dẫn: [Resource seeding](resource-seeding.md). Chưa có seed script hay database thật đã xác minh.
+**Hai luồng riêng:** visual có thể dùng mock rõ nhãn; tính năng chỉ Done sau kiểm chứng behavior/backend.
 
-**Fallback:** URL không lấy được → dán text. Không hứa đọc mọi TED/video URL hoặc vượt paywall.
+Không bật deploy hay ghi production trong prompt design. Không cho hai agent sửa đồng thời cùng file.
 
-PDF/DOCX đề xuất ở giai đoạn sau. PDF scan cần OCR; video cần transcription và kiểm tra quyền sử dụng.
+## C Hiện tại đã làm được gì? {meta=&quot;Static audit + build&quot;}
 
-## E Từ bản thiết kế đến lớp học thật {meta=&quot;Không dùng mega-prompt&quot;}
-
-```timeline v
-01 | Chốt PRD | Quyền, mode, timing, reconnect và tiêu chí nghiệm thu.
-02 | Audit + ticket/seam | Đọc source và DESIGN.md, chốt lát cắt đầu với test gate.
-03 | Cải thiện tại chỗ | Teacher Setup/Live, Join/Reader và motion thực; fixture demo có nhãn.
-04 | Backend thật | Auth, lưu bài, room, realtime; thử trên hai thiết bị.
-05 | Import và kiểm thử | URL lỗi có fallback; annotation sai có chỉnh tay.
-06 | Release gate | Kiểm tra secrets, quyền, chi phí và số học viên mục tiêu.
-```
-
-**Phong cách app:** đọc sách, nền giấy ngà, chữ mực, serif cho bài đọc. UI và nội dung bài đều tiếng Anh.
-
-Theme của tài liệu này không thay thế brand của app.
-
-**Logo app:** `assets/logo.png`. Attach asset cùng source cho AI Studio; đường dẫn local không phải URL công khai.
-
-## F Hợp đồng sản phẩm đã chốt
-
-| Nội dung | Trạng thái |
+| Nhóm | Đánh giá |
 |---|---|
-| Highlight | Đã chốt: detect và tô exact phrase, không tô cả câu/đoạn |
-| Thời gian | Mặc định giữ 3s + xóa 1s; tùy chọn tổng 3s có 1s xóa cuối |
-| Quy mô | Đã chốt: khoảng 20 học viên/phòng; cần load test |
-| Ngôn ngữ | Đã chốt: UI tiếng Anh, bài tiếng Anh |
-| Học viên vào phòng | Link + tên, không đăng ký; late join cùng trạng thái hiện tại |
-| Sau khi xóa | Trang trống chờ teacher; giáo viên chuyển thủ công |
-| Teacher | Google sign-in qua Firebase; toàn quyền phòng của mình |
-| Import MVP | Text/TXT/URL; agent seed Draft trực tiếp database; PDF/DOCX sau |
+| React/Vite, TeacherView, StudentView | Có prototype; build pass |
+| Sentence/Paragraph và toggle highlight | Có UI; hành vi mới chưa đủ |
+| Paper/serif | Có nền tảng; chưa đúng CHUNKS đỏ/English UI |
+| Timing 3s/1s, expiry và Show/Hide | Chưa đúng; eraser đang lặp |
+| Apply to room và private navigation | Chưa có |
+| Auth, join/presence và realtime | SDK/config có; flow thật chưa có trong code đã đọc |
+| Library Draft/Published, review và seed | Có hợp đồng docs; chưa có implementation |
+| Mobile, quyền và 20 learners | Chưa kiểm chứng |
 
-**Trạng thái:** prototype từng build pass trong audit; chưa xác minh production Auth/backend/rules/realtime hoặc deploy. Export Stitch local đã xóa; remote project không bị xóa. Xem [handoff hiện hành](aistudio-handoff.md).
+Bằng chứng và vị trí code: [Spec coverage baseline](spec-coverage-baseline.md).
 
-Xem yêu cầu chi tiết tại [PRD](PRD.md), visual contract tại [DESIGN.md](../DESIGN.md).
+Không báo phần trăm hoàn thành khi chưa có acceptance evidence.
 
-**Cơ sở:** yêu cầu của bạn và tài liệu Google về [AI Studio Build](https://ai.google.dev/gemini-api/docs/aistudio-build-mode), [full-stack](https://ai.google.dev/gemini-api/docs/aistudio-fullstack).
+## D Tôi phụ trách design như thế nào?
 
-Bản `docs/architecture-proposal.md` là lịch sử, không phải hợp đồng hiện tại. PRD và DESIGN.md là nguồn chuẩn; lựa chọn triển khai cloud còn cần xác minh.
+1. Đọc code và chụp giao diện desktop/mobile hiện tại.
+2. Thiết kế Teacher Setup/Live và Learner Reader theo DESIGN.md.
+3. Agent cải thiện layout theo DESIGN.md; dùng preview thực cho eraser và reading guide.
+4. Chốt ticket/test seam rồi implement; bạn xem UI thật để góp ý trước khi mở rộng.
+5. Agent implement; tôi review diff, browser và từng tiêu chí spec.
+
+Motion phải có Hold, Erasing, Blank waiting và Manual Show. Default giữ 3s rồi xóa 1s.
+
+Within-window tổng 3s, xóa trong giây cuối. Pause/resume và late join phải giữ đúng phase.
+
+## E Prompt sẽ đổi như thế nào?
+
+Prompt AI Studio đã cập nhật theo PRD/spec hiện tại. Chạy [audit source](prompts/aistudio-audit.md) trước. Dùng [checkpoint đầu](prompts/aistudio-first-checkpoint.md) sau khi duyệt kế hoạch. Không phụ thuộc Stitch hay ZIP chưa tồn tại.
+
+Prompt Antigravity phải chỉ rõ baseline, phạm vi file, những gì giữ nguyên, tiêu chí spec và test gate. Mỗi ticket trả diff, lệnh test, ảnh và giới hạn chưa xác minh.
+
+**Bước kế tiếp:** dùng [prompt Antigravity](prompts/antigravity-redesign-and-backend.md), hoặc [handoff AI Studio](aistudio-handoff.md), với cùng source/PRD/spec. Không để hai agent cùng sửa một nhóm file.
+
+Trang này là kế hoạch triển khai. Hai task design lịch sử chưa đạt gate đầy đủ; export Stitch local đã xóa. Chưa chạy implementation Antigravity/AI Studio, chưa có backend hoàn thiện hoặc deploy.
+
+HTML đã render; keyboard, contrast và reflow của trang mới chưa kiểm tra trong browser.
 </textarea>
 <script>
 (() => {

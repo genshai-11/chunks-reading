@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isRoomTeacher(roomId) {
+      return isAuthenticated() && 
+        request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.teacherUid;
+    }
+
+    // Default deny all documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Teacher Profiles
+    match /teachers/{teacherId} {
+      allow read, write: if isUser(teacherId);
+    }
+
+    // Categories
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isAuthenticated() && 
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 100;
+      allow update: if isAuthenticated() && 
+        resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Resources (Articles)
+    match /resources/{resourceId} {
+      // Teachers read own resources; learners can only read published resources
+      allow read: if (isAuthenticated() && resource.data.ownerUid == request.auth.uid) ||
+                     (resource.data.status == 'published');
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() <= 200 &&
+        request.resource.data.status in ['draft', 'published', 'archived'];
+
+      allow update: if isAuthenticated() && 
+        resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.ownerUid == request.auth.uid;
+
+      allow delete: if isAuthenticated() && resource.data.ownerUid == request.auth.uid;
+
+      // Versions subcollection
+      match /versions/{versionId} {
+        allow read: if (isAuthenticated() && get(/databases/$(database)/documents/resources/$(resourceId)).data.ownerUid == request.auth.uid) ||
+                       (get(/databases/$(database)/documents/resources/$(resourceId)).data.status == 'published');
+        
+        // Only teacher owner can create versions; published versions are immutable
+        allow create: if isAuthenticated() && 
+          get(/databases/$(database)/documents/resources/$(resourceId)).data.ownerUid == request.auth.uid &&
+          request.resource.data.canonicalText is string &&
+          request.resource.data.canonicalText.size() <= 50000;
+
+        allow update: if false; // Versions are immutable!
+        allow delete: if isAuthenticated() && 
+          get(/databases/$(database)/documents/resources/$(resourceId)).data.ownerUid == request.auth.uid;
+      }
+    }
+
+    // Classroom Rooms
+    match /rooms/{roomId} {
+      // Anyone with active link or in session can read room state
+      allow read: if resource.data.status != 'ended' || 
+                     (isAuthenticated() && resource.data.teacherUid == request.auth.uid);
+
+      // Only authenticated teachers can create rooms they own
+      allow create: if isAuthenticated() && 
+        request.resource.data.teacherUid == request.auth.uid &&
+        request.resource.data.code is string &&
+        request.resource.data.code.size() <= 20 &&
+        request.resource.data.status in ['waiting', 'reading', 'paused', 'manual_show', 'ended'];
+
+      // ONLY the teacher owner can update room controls and playback!
+      // Learners are strictly denied writes to rooms/{roomId}
+      allow update: if isAuthenticated() && 
+        resource.data.teacherUid == request.auth.uid &&
+        request.resource.data.teacherUid == resource.data.teacherUid;
+
+      allow delete: if isAuthenticated() && resource.data.teacherUid == request.auth.uid;
+
+      // Room Participants / Presence
+      match /members/{memberId} {
+        // Members and teacher can read participant list
+        allow read: if true;
+
+        // Any joiner can register their technical presence with name & heartbeat
+        allow create, update: if 
+          request.resource.data.name is string &&
+          request.resource.data.name.size() > 0 &&
+          request.resource.data.name.size() <= 50 &&
+          request.resource.data.isOnline is bool;
+
+        // Teacher can remove members; members can remove themselves
+        allow delete: if isRoomTeacher(roomId) || 
+                         (isAuthenticated() && request.auth.uid == memberId);
+      }
+    }
+  }
+}

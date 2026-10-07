@@ -1,0 +1,169 @@
+{
+  "runId": "run_a24eaae98626",
+  "coordinator": "term_638ce9cd-6edb-4fb3-8a59-4d69f361e3c3",
+  "paper": {
+    "runId": "run_a24eaae98626",
+    "taskId": "task_add9a9947ab9",
+    "dispatchId": "ctx_c7c5ff85d7ce",
+    "state": "ready",
+    "stage": "input_accepted",
+    "turnStart": "unsupported",
+    "setup": {
+      "requested": "not_applicable",
+      "effective": "not_applicable",
+      "source": "existing_worktree",
+      "hookFound": false,
+      "startupPolicy": "start-immediately",
+      "state": "not_applicable"
+    },
+    "launch": {
+      "requested": {
+        "agent": "pi",
+        "model": null,
+        "effort": null
+      },
+      "effective": {
+        "agent": "pi",
+        "model": null,
+        "effort": null
+      }
+    },
+    "mode": {
+      "mode": "terminal",
+      "preferred": "terminal",
+      "reason": "user_default",
+      "detail": "Started a terminal agent worker, the default for new agent tabs in your settings."
+    },
+    "timeoutMs": 90000,
+    "effects": [
+      {
+        "kind": "worktree",
+        "action": "reused",
+        "id": "391b0448-e4ce-4a0a-a8d7-914e6f989f48::C:/Users/gensh/Desktop/CHUNKS/PROJECT/Chunks-reading"
+      },
+      {
+        "kind": "setup",
+        "action": "not_applicable",
+        "state": "not_applicable"
+      },
+      {
+        "kind": "terminal",
+        "role": "agent",
+        "action": "created",
+        "id": "term_4bb866ac-88cd-4fc6-8394-086bdf23c38b",
+        "surface": "visible"
+      },
+      {
+        "kind": "dispatch_input",
+        "role": "agent",
+        "id": "term_4bb866ac-88cd-4fc6-8394-086bdf23c38b",
+        "state": "accepted"
+      }
+    ],
+    "prompt": {
+      "requestId": "270d5779-8681-4a05-9efc-bfd0cc5cb441",
+      "stages": [
+        "input_accepted"
+      ],
+      "provider": "unsupported",
+      "observation": "unsupported",
+      "processIncarnation": "a2e441ac-08ff-428a-8da8-dc93aceab851",
+      "generation": 11,
+      "baselineWorkingSequence": 0,
+      "baselineExplicitWorkingStartedAt": null,
+      "baselinePermissionSequence": 0
+    },
+    "residualResources": [],
+    "mutation": {
+      "requestId": "270d5779-8681-4a05-9efc-bfd0cc5cb441",
+      "replayed": false
+    }
+  },
+  "stitch": {
+    "runId": "run_a24eaae98626",
+    "taskId": "task_f90da02a9414",
+    "dispatchId": "ctx_3339502e8df1",
+    "state": "ready",
+    "stage": "input_accepted",
+    "turnStart": "unsupported",
+    "setup": {
+      "requested": "not_applicable",
+      "effective": "not_applicable",
+      "source": "existing_worktree",
+      "hookFound": false,
+      "startupPolicy": "start-immediately",
+      "state": "not_applicable"
+    },
+    "launch": {
+      "requested": {
+        "agent": "pi",
+        "model": null,
+        "effort": null
+      },
+      "effective": {
+        "agent": "pi",
+        "model": null,
+        "effort": null
+      }
+    },
+    "mode": {
+      "mode": "terminal",
+      "preferred": "terminal",
+      "reason": "user_default",
+      "detail": "Started a terminal agent worker, the default for new agent tabs in your settings."
+    },
+    "timeoutMs": 90000,
+    "effects": [
+      {
+        "kind": "worktree",
+        "action": "reused",
+        "id": "391b0448-e4ce-4a0a-a8d7-914e6f989f48::C:/Users/gensh/Desktop/CHUNKS/PROJECT/Chunks-reading"
+      },
+      {
+        "kind": "setup",
+        "action": "not_applicable",
+        "state": "not_applicable"
+      },
+      {
+        "kind": "terminal",
+        "role": "agent",
+        "action": "created",
+        "id": "term_c2446c8d-4563-47b3-a56c-af507a92a116",
+        "surface": "visible"
+      },
+      {
+        "kind": "dispatch_input",
+        "role": "agent",
+        "id": "term_c2446c8d-4563-47b3-a56c-af507a92a116",
+        "state": "accepted"
+      }
+    ],
+    "prompt": {
+      "requestId": "87381019-16ae-432e-b76c-5ef92687df64",
+      "stages": [
+        "input_accepted"
+      ],
+      "provider": "unsupported",
+      "observation": "unsupported",
+      "processIncarnation": "81f60e81-2819-4688-81ba-618d81fe04a4",
+      "generation": 10,
+      "baselineWorkingSequence": 0,
+      "baselineExplicitWorkingStartedAt": null,
+      "baselinePermissionSequence": 0
+    },
+    "residualResources": [],
+    "mutation": {
+      "requestId": "87381019-16ae-432e-b76c-5ef92687df64",
+      "replayed": false
+    }
+  },
+  "gate": "Historical candidate gate superseded: current DESIGN.md authorizes independent in-place improvement; ticket/seam and release gates remain",
+  "outcomes": {
+    "paper": "failed_full_gate_partial_artifacts_quota",
+    "stitch": "failed_at_worker_settlement_later_five_html_screens_arrived"
+  },
+  "laterEvidence": null,
+  "localCleanup": "User requested deletion of docs/stitch, docs/design-review/stitch and stitch-task.md. Remote projects untouched; retained review records are historical, not implementation inputs.",
+  "review": "coordinator-review.md",
+  "terminalCleanup": "release reported retained/user_takeover; no reclaimable terminals"
+}

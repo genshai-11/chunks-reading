@@ -1,0 +1,118 @@
+{
+  "outcome": "failed",
+  "reason": "Paper weekly MCP quota stopped required Reader states and JSX export",
+  "fileId": "01M4B47GZ9SNSN67J51WB6K0FR",
+  "fileName": "Chunks reading - Red book redesign - Paper candidate",
+  "url": "https://app.paper.design/file/01M4B47GZ9SNSN67J51WB6K0FR/p-1-0",
+  "pageId": "p-1-0",
+  "tokenHash": "791f1282",
+  "artboards": [
+    {
+      "id": "1-0",
+      "name": "01 Library",
+      "width": 1440,
+      "height": 900,
+      "status": "content authored; visual review unverified"
+    },
+    {
+      "id": "2-0",
+      "name": "02 Import and phrase review",
+      "width": 1440,
+      "height": 900,
+      "status": "content authored; visual review unverified"
+    },
+    {
+      "id": "3-0",
+      "name": "03 Private room setup",
+      "width": 1440,
+      "height": 900,
+      "status": "content authored; visual review unverified"
+    },
+    {
+      "id": "4-0",
+      "name": "04 Teacher live",
+      "width": 1440,
+      "height": 900,
+      "status": "content authored; visual review unverified"
+    },
+    {
+      "id": "5-0",
+      "name": "05 Join room",
+      "width": 390,
+      "height": 844,
+      "status": "content authored; visual review unverified"
+    },
+    {
+      "id": "6-0",
+      "name": "06 Reader Hold",
+      "width": 390,
+      "height": 844,
+      "status": "header and metadata only; quota stopped current-unit content"
+    },
+    {
+      "id": "7-0",
+      "name": "07 Reader Erasing",
+      "width": 390,
+      "height": 844,
+      "status": "header only; quota stopped states"
+    },
+    {
+      "id": "8-0",
+      "name": "08 Reader Blank waiting",
+      "width": 390,
+      "height": 844,
+      "status": "header only; quota stopped states"
+    },
+    {
+      "id": "9-0",
+      "name": "09 Reader Manual Show",
+      "width": 390,
+      "height": 844,
+      "status": "header only; quota stopped states"
+    },
+    {
+      "id": "A-0",
+      "name": "10 Teacher Google sign-in",
+      "width": 600,
+      "height": 600,
+      "status": "empty reserved artboard"
+    }
+  ],
+  "exports": {
+    "screenshots": [
+      "01-library.jpg",
+      "02-editor.jpg",
+      "03-setup.jpg",
+      "04-live.jpg"
+    ],
+    "screenshotEncodingCopies": [
+      "01-library.jpg.base64",
+      "02-editor.jpg.base64",
+      "03-setup.jpg.base64",
+      "04-live.jpg.base64"
+    ],
+    "jsx": [],
+    "html": [],
+    "joinScreenshot": "received during failed script; not retained"
+  },
+  "cleanup": "finish_working_on_nodes returned OK",
+  "pendingCalls": [],
+  "logo": "labelled slots; actual Windows asset not transferred",
+  "implementationApproval": "required; no app edits",
+  "checks": {
+    "English": "pass authored text",
+    "redBook": "pass authored styles; visual unverified",
+    "independentModeHighlight": "pass design",
+    "exactSpans": "pass Setup node intent; Reader incomplete",
+    "bothTimingPolicies": "pass Setup design",
+    "showHide": "pass Live design",
+    "applyWaits": "pass design",
+    "linkName": "pass Join design",
+    "draftReview": "pass editor design",
+    "noLearnerPlayback": "pass current authored controls; incomplete Reader",
+    "desktopMobile": "fail incomplete Reader",
+    "remoteIds": "pass",
+    "visualQA": "unverified",
+    "authBuildBackend": "unverified"
+  }
+}
