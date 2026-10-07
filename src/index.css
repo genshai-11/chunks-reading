@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --bg-parchment: #F8F5EE;
+  --bg-card: #FFFFFF;
+  --text-ink: #1F2421;
+  --text-muted: #5C6761;
+  --accent-moss: #285238;
+  --accent-moss-light: #3D7351;
+  --accent-gold: #ECC35F;
+  --highlight-gold: #FEF3C7;
+  --border-subtle: #E2DBD0;
+  --eraser-overlay: #F8F5EE;
+}
+
+body {
+  background-color: var(--bg-parchment);
+  color: var(--text-ink);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.font-serif {
+  font-family: 'Lora', Georgia, serif;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Book reading paper effect */
+.parchment-sheet {
+  background-color: #FDFAF5;
+  box-shadow: 0 4px 20px -2px rgba(34, 43, 37, 0.08), 0 1px 3px 0 rgba(34, 43, 37, 0.04);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Highlight style for idioms & phrases */
+.chunk-highlight {
+  background-color: var(--highlight-gold);
+  border-bottom: 2px solid var(--accent-gold);
+  padding: 0.1em 0.25em;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+/* Guide effect */
+.guide-active {
+  background: linear-gradient(120deg, rgba(236, 195, 95, 0.3) 0%, rgba(40, 82, 56, 0.15) 100%);
+  border-radius: 6px;
+  padding: 4px 8px;
+}

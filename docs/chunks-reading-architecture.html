@@ -1,0 +1,1234 @@
+<!doctype html>
+<html lang="vi" data-theme="agent-skill" data-mode="light" data-style="80">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Answer me with HTML 0.4.9">
+<title>Chunks reading</title>
+<style>
+html[data-theme="blueprint"], html[data-theme="blueprint"][data-mode="light"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 0px;
+  --shadow: none;
+  --bw: 1.5px;
+  --head-font: var(--font-sans);
+  --bg: #f6f6f3;
+  --paper: #ffffff;
+  --ink: #16181d;
+  --ink-2: #4b5260;
+  --ink-3: #8b929e;
+  --line: #1d2026;
+  --line-2: #d6dae1;
+  --fill: #f3f5f8;
+  --accent: #1d5fbf;
+  --accent-bg: #e4ecf8;
+  --ok: #1d5fbf;
+  --ok-bg: #e4ecf8;
+  --err: #c62828;
+  --err-bg: #fbeaea;
+  --warn: #a8620a;
+  --warn-bg: #fdf3e2;
+  --head-bg: #16181d;
+  --head-fg: #ffffff;
+}
+html[data-theme="blueprint"][data-mode="dark"] {
+  --bg: #081322;
+  --paper: #0d1c31;
+  --ink: #e6edf7;
+  --ink-2: #a9b8cc;
+  --ink-3: #6b7f99;
+  --line: #c9d6e8;
+  --line-2: #23385a;
+  --fill: #12253f;
+  --accent: #6ea8ff;
+  --accent-bg: #16305a;
+  --ok: #6ea8ff;
+  --ok-bg: #16305a;
+  --err: #ff7070;
+  --err-bg: #3b1620;
+  --warn: #f0b14a;
+  --warn-bg: #3a2a10;
+  --head-bg: #e6edf7;
+  --head-fg: #081322;
+}
+@media (prefers-color-scheme: dark) {
+html[data-theme="blueprint"][data-mode="auto"] {
+  --bg: #081322;
+  --paper: #0d1c31;
+  --ink: #e6edf7;
+  --ink-2: #a9b8cc;
+  --ink-3: #6b7f99;
+  --line: #c9d6e8;
+  --line-2: #23385a;
+  --fill: #12253f;
+  --accent: #6ea8ff;
+  --accent-bg: #16305a;
+  --ok: #6ea8ff;
+  --ok-bg: #16305a;
+  --err: #ff7070;
+  --err-bg: #3b1620;
+  --warn: #f0b14a;
+  --warn-bg: #3a2a10;
+  --head-bg: #e6edf7;
+  --head-fg: #081322;
+}
+}
+
+html[data-theme="shadcn"], html[data-theme="shadcn"][data-mode="light"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 8px;
+  --shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --bw: 1px;
+  --head-font: var(--font-sans);
+  --bg: #fafafa;
+  --paper: #ffffff;
+  --ink: #09090b;
+  --ink-2: #71717a;
+  --ink-3: #a1a1aa;
+  --line: #e4e4e7;
+  --line-2: #f0f0f2;
+  --fill: #f4f4f5;
+  --accent: #2563eb;
+  --accent-bg: #eff6ff;
+  --ok: #16a34a;
+  --ok-bg: #f0fdf4;
+  --err: #dc2626;
+  --err-bg: #fef2f2;
+  --warn: #d97706;
+  --warn-bg: #fffbeb;
+  --head-bg: #18181b;
+  --head-fg: #fafafa;
+}
+html[data-theme="shadcn"][data-mode="dark"] {
+  --bg: #09090b;
+  --paper: #121215;
+  --ink: #fafafa;
+  --ink-2: #a1a1aa;
+  --ink-3: #71717a;
+  --line: #27272a;
+  --line-2: #1c1c1f;
+  --fill: #18181b;
+  --accent: #60a5fa;
+  --accent-bg: #172554;
+  --ok: #4ade80;
+  --ok-bg: #052e16;
+  --err: #f87171;
+  --err-bg: #450a0a;
+  --warn: #fbbf24;
+  --warn-bg: #451a03;
+  --head-bg: #fafafa;
+  --head-fg: #18181b;
+}
+@media (prefers-color-scheme: dark) {
+html[data-theme="shadcn"][data-mode="auto"] {
+  --bg: #09090b;
+  --paper: #121215;
+  --ink: #fafafa;
+  --ink-2: #a1a1aa;
+  --ink-3: #71717a;
+  --line: #27272a;
+  --line-2: #1c1c1f;
+  --fill: #18181b;
+  --accent: #60a5fa;
+  --accent-bg: #172554;
+  --ok: #4ade80;
+  --ok-bg: #052e16;
+  --err: #f87171;
+  --err-bg: #450a0a;
+  --warn: #fbbf24;
+  --warn-bg: #451a03;
+  --head-bg: #fafafa;
+  --head-fg: #18181b;
+}
+}
+
+html[data-theme="agent-skill"], html[data-theme="agent-skill"][data-mode="light"] {
+  --font-sans: Inter, "Inter Fallback", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  --head-font: var(--font-sans);
+  --radius: 8px;
+  --bw: 1px;
+  --shadow: 0 4px 8px rgba(0,0,0,.05), 0 4px 4px rgba(0,0,0,.03);
+  --space-unit: 4px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-base: 16px;
+  --text-lg: 21px;
+  --text-xl: 30px;
+  --motion-fast: 150ms;
+  --motion-normal: 250ms;
+  --target-size: 44px;
+  --bg: #f6f6f3;
+  --paper: #ffffff;
+  --fill: #edede8;
+  --ink: #222220;
+  --ink-2: #6b6b66;
+  --ink-3: #3d3d38;
+  --line: #cfcfc9;
+  --line-2: #e1e7ef;
+  --control-border: #6b6b66;
+  --accent: #020817;
+  --accent-bg: #edede8;
+  --focus: #1d4ed8;
+  --ok: #166534;
+  --ok-bg: #f0fdf4;
+  --err: #991b1b;
+  --err-bg: #fef2f2;
+  --warn: #854d0e;
+  --warn-bg: #fefce8;
+  --head-bg: #222220;
+  --head-fg: #ffffff;
+}
+html[data-theme="agent-skill"][data-mode="dark"] {
+  --bg: #000000;
+  --paper: #171715;
+  --fill: #222220;
+  --ink: #f6f6f3;
+  --ink-2: #cfcfc9;
+  --ink-3: #edede8;
+  --line: #565650;
+  --line-2: #3d3d38;
+  --control-border: #cfcfc9;
+  --accent: #f6f6f3;
+  --accent-bg: #222220;
+  --focus: #93c5fd;
+  --ok: #86efac;
+  --ok-bg: #14291b;
+  --err: #fca5a5;
+  --err-bg: #331919;
+  --warn: #fde047;
+  --warn-bg: #302817;
+  --head-bg: #f6f6f3;
+  --head-fg: #222220;
+}
+@media (prefers-color-scheme: dark) {
+html[data-theme="agent-skill"][data-mode="auto"] {
+  --bg: #000000;
+  --paper: #171715;
+  --fill: #222220;
+  --ink: #f6f6f3;
+  --ink-2: #cfcfc9;
+  --ink-3: #edede8;
+  --line: #565650;
+  --line-2: #3d3d38;
+  --control-border: #cfcfc9;
+  --accent: #f6f6f3;
+  --accent-bg: #222220;
+  --focus: #93c5fd;
+  --ok: #86efac;
+  --ok-bg: #14291b;
+  --err: #fca5a5;
+  --err-bg: #331919;
+  --warn: #fde047;
+  --warn-bg: #302817;
+  --head-bg: #f6f6f3;
+  --head-fg: #222220;
+}
+}
+
+html[lang="ja"][data-theme][data-mode] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans CJK JP", "Noto Sans JP", "PingFang SC", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Answer me with HTML base — uses theme variables only, never hard-coded colors (theme tokens and decorations: themes/<name>.js). Exception: the var() fallbacks of diagrams (flow / sequence) equal the blueprint light tokens, guarded by a test. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 14px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+code, pre, kbd { font-family: var(--font-mono); }
+
+/* ── Toolbar ─────────────────────────────── */
+.am-toolbar {
+  position: fixed; top: 12px; right: 12px; z-index: 10; display: flex; gap: 6px;
+}
+.am-btn {
+  font: 12px/1 var(--font-sans); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line-2); border-radius: var(--radius); padding: 7px 10px; cursor: pointer;
+}
+.am-btn:hover { border-color: var(--ink-3); }
+.am-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Header ───────────────────────────────── */
+.am-head { margin: 0 0 20px; padding-right: 260px; }
+.am-head h1 { margin: 0; font-size: 24px; line-height: 1.25; letter-spacing: -0.01em; }
+.am-sub { margin: 4px 0 0; color: var(--ink-2); }
+.am-head-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.am-head-meta b { font-family: var(--font-mono); font-weight: 400; color: var(--ink-3); margin-right: 6px; }
+.am-intro { margin-top: 12px; max-width: 80ch; }
+
+/* ── sheet template ────────────────────────── */
+.am-sheet { max-width: 1680px; margin: 0 auto; padding: 32px 28px 40px; }
+.am-frame { position: relative; }
+.am-grid {
+  display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 20px; align-items: start;
+}
+.am-ruler { display: none; }
+.am-ruler span { flex: 1; display: flex; align-items: center; justify-content: center; }
+.am-ruler--top, .am-ruler--bottom { left: 18px; right: 18px; height: 18px; }
+.am-ruler--top { top: 0; }
+.am-ruler--bottom { bottom: 0; }
+.am-ruler--left, .am-ruler--right { top: 18px; bottom: 18px; width: 18px; flex-direction: column; }
+.am-ruler--left { left: 0; }
+.am-ruler--right { right: 0; }
+.am-ruler--top span + span, .am-ruler--bottom span + span { border-left: 1px solid var(--line); }
+.am-ruler--left span + span, .am-ruler--right span + span { border-top: 1px solid var(--line); }
+
+/* ── Panels ───────────────────────────────── */
+.am-panel {
+  background: var(--paper); border: var(--bw) solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); min-width: 0; overflow: hidden;
+}
+.am-panel-head {
+  display: flex; align-items: stretch; gap: 0; border-bottom: var(--bw) solid var(--line); min-height: 34px;
+}
+.am-panel-id {
+  display: flex; align-items: center; justify-content: center; min-width: 34px; padding: 0 8px;
+  background: var(--head-bg); color: var(--head-fg); font-weight: 600; font-size: 14px;
+}
+.am-panel-head h2 { margin: 0; padding: 7px 12px; font-size: 15px; font-weight: 600; flex: 1; display: flex; align-items: center; }
+.am-panel-meta { align-self: center; padding: 0 12px; font: 11px/1.3 var(--font-mono); color: var(--ink-2); text-align: right; }
+.am-panel-body { padding: 14px 16px 16px; }
+.am-panel-body > * + * { margin-top: 12px; }
+
+/* ── Markdown body ───────────────────────── */
+.am-md > :first-child { margin-top: 0; }
+.am-md > :last-child { margin-bottom: 0; }
+.am-md p { margin: 0 0 8px; }
+.am-md ul, .am-md ol { margin: 0 0 8px; padding-left: 20px; }
+.am-md li + li { margin-top: 3px; }
+.am-md h3, .am-md h4 { margin: 14px 0 6px; font-size: 13px; }
+.am-md a { color: var(--accent); }
+.am-md blockquote { margin: 0 0 8px; padding: 2px 12px; border-left: 3px solid var(--line-2); color: var(--ink-2); }
+.am-md :not(pre) > code { font-size: 0.9em; background: var(--fill); padding: 1px 5px; border-radius: 4px; }
+.am-md hr { border: 0; border-top: 1px solid var(--line-2); margin: 12px 0; }
+.am-md table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.am-md th {
+  text-align: left; font: 11px/1.3 var(--font-mono); color: var(--ink-2); font-weight: 400;
+  padding: 6px 10px; border-bottom: 1px solid var(--line-2);
+}
+/* th { text-align: left } outranks the align attribute from Markdown alignment, so restore right and center columns explicitly. */
+.am-md th[align="right"] { text-align: right; }
+.am-md th[align="center"] { text-align: center; }
+.am-md td { padding: 7px 10px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+.am-md tbody tr:nth-child(even) td { background: var(--fill); }
+.am-table-wrap { overflow-x: auto; }
+.am-code {
+  margin: 0; padding: 12px 14px; background: var(--fill); border: 1px solid var(--line-2);
+  border-radius: var(--radius); overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+}
+
+/* ── Status badges ok / no / warn ──────────────── */
+.am-status { white-space: nowrap; font-weight: 500; }
+.am-status--ok { color: var(--ok); }
+.am-status--no { color: var(--err); }
+.am-status--warn { color: var(--warn); }
+.am-status-icon { display: inline-block; width: 1.1em; font-weight: 700; }
+
+/* ── callout ─────────────────────────────── */
+.am-callout {
+  border: 1px solid var(--line-2); border-left: 3px solid var(--accent); background: var(--accent-bg);
+  padding: 10px 14px; border-radius: var(--radius);
+}
+.am-callout--ok { border-left-color: var(--ok); background: var(--ok-bg); }
+.am-callout--warn { border-left-color: var(--warn); background: var(--warn-bg); }
+.am-callout--err { border-left-color: var(--err); background: var(--err-bg); }
+.am-callout-title { font-weight: 600; margin-bottom: 4px; }
+
+/* ── kv title block ─────────────────────────── */
+.am-kv {
+  display: grid; grid-template-columns: repeat(var(--kv-cols, 2), minmax(0, 1fr)); margin: 0;
+  border-top: var(--bw) solid var(--line); border-left: var(--bw) solid var(--line);
+}
+.am-kv-cell { border-right: var(--bw) solid var(--line); border-bottom: var(--bw) solid var(--line); padding: 6px 10px 8px; min-width: 0; }
+.am-kv-cell--wide { grid-column: 1 / -1; }
+.am-kv dt { font: 11px/1.4 var(--font-mono); color: var(--ink-2); }
+.am-kv dd { margin: 2px 0 0; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.am-kv-cell--wide dd { font-size: 17px; font-weight: 600; }
+
+/* ── timeline ────────────────────────────── */
+.am-timeline { list-style: none; margin: 0; padding: 0; }
+.am-timeline--h { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); padding-top: 4px; }
+.am-timeline--h li { position: relative; text-align: center; padding: 0 6px; }
+.am-timeline--h li::before {
+  content: ""; position: absolute; top: 31px; left: 0; right: 0; border-top: var(--bw) solid var(--line);
+}
+.am-timeline--h li:first-child::before { left: 50%; }
+.am-timeline--h li:last-child::before { right: 50%; }
+.am-tl-when { display: block; font-size: 15px; font-weight: 500; height: 24px; }
+.am-tl-dot {
+  position: relative; display: block; width: 11px; height: 11px; margin: 2px auto 8px;
+  border: var(--bw) solid var(--line); border-radius: 50%; background: var(--paper);
+}
+.am-tl-item--hi .am-tl-dot { background: var(--accent); border-color: var(--accent); }
+.am-tl-title { display: block; font-size: 12.5px; font-weight: 500; }
+.am-tl-text { display: block; font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+.am-timeline--v li { position: relative; padding: 0 0 14px 22px; }
+.am-timeline--v li::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: -6px; border-left: var(--bw) solid var(--line-2); }
+.am-timeline--v li:last-child::before { display: none; }
+.am-timeline--v .am-tl-dot { position: absolute; left: 0; top: 4px; margin: 0; }
+.am-timeline--v .am-tl-when { display: inline; height: auto; font: 12px var(--font-mono); color: var(--ink-2); margin-right: 8px; }
+.am-timeline--v .am-tl-title { display: inline; font-size: 14px; }
+.am-timeline--v .am-tl-text { margin-top: 2px; }
+
+/* ── annot sentence notes ──────────────────────── */
+.am-annot + .am-annot { border-top: 1px solid var(--line-2); padding-top: 12px; }
+.am-annot-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.am-annot-meta { font: 11px var(--font-mono); font-weight: 400; color: var(--ink-2); }
+.am-annot-scroll { overflow-x: auto; }
+.am-annot-line {
+  position: relative; display: inline-block; white-space: pre; font: 14px/1.6 var(--font-mono);
+  padding-bottom: calc(var(--rows, 0) * 17px + 14px);
+}
+.am-annot-line--wrap { display: block; white-space: normal; padding-bottom: 10px; }
+.am-annot-line--wrap .am-seg { white-space: nowrap; }
+.am-seg { position: relative; }
+.am-seg::after {
+  content: ""; position: absolute; left: 1px; right: 1px; top: calc(100% + 1px); height: 5px;
+  border: 1px solid var(--accent); border-top: 0;
+}
+.am-seg-n {
+  position: absolute; left: 0; top: calc(100% + 8px + var(--row, 0) * 17px);
+  font: 11px/16px var(--font-sans); color: var(--accent); white-space: nowrap;
+}
+.am-seg--err { color: var(--err); }
+.am-seg--err::after { border-color: var(--err); }
+.am-seg--err .am-seg-n { color: var(--err); }
+.am-annot-caption { font-size: 12px; color: var(--ink-2); }
+
+/* ── limits bars ───────────────────────── */
+.am-lim + .am-lim { margin-top: 14px; }
+.am-lim-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 4px; }
+.am-lim-val { font: 12px var(--font-mono); color: var(--accent); white-space: nowrap; }
+.am-lim-track { position: relative; height: 12px; border: 1px solid var(--line-2); background: var(--fill); border-radius: calc(var(--radius) / 2); }
+.am-lim-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-bg); border-right: 1px solid var(--accent); }
+.am-lim-mark { position: absolute; top: -4px; bottom: -4px; border-left: 2px solid var(--accent); }
+.am-lim.is-over .am-lim-fill { background: var(--err-bg); border-right-color: var(--err); }
+.am-lim.is-over .am-lim-val { color: var(--err); }
+.am-lim-ticks { position: relative; height: 16px; font: 10px/16px var(--font-mono); color: var(--ink-3); }
+.am-lim-ticks span { position: absolute; transform: translateX(-50%); }
+.am-lim-ticks span:first-child { transform: none; }
+.am-lim-note { font-size: 11px; color: var(--ink-2); margin-left: 6px; }
+
+/* ── tree ─────────────────────────── */
+.am-tree { font-size: 13px; }
+.am-tree-root { display: flex; justify-content: center; position: relative; padding-bottom: 18px; }
+.am-tree-root::after { content: ""; position: absolute; bottom: 0; left: 50%; height: 18px; border-left: var(--bw) solid var(--line); }
+.am-tree-root--solo { padding-bottom: 12px; }
+.am-tree-root--solo::after { display: none; }
+.am-tree-box {
+  border: var(--bw) solid var(--line); background: var(--paper); padding: 6px 14px; text-align: center;
+  border-radius: var(--radius); font-weight: 600;
+}
+.am-tree-box small { display: block; font-weight: 400; color: var(--ink-2); font-size: 12px; }
+.am-tree-box--root { background: var(--accent-bg); font-size: 15px; padding: 8px 28px; }
+.am-tree-cols { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); }
+.am-tree-col { position: relative; padding: 18px 8px 0; min-width: 0; }
+.am-tree-col::before { content: ""; position: absolute; top: 0; left: 0; right: 0; border-top: var(--bw) solid var(--line); }
+.am-tree-col:first-child::before { left: 50%; }
+.am-tree-col:last-child::before { right: 50%; }
+.am-tree-col::after { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: var(--bw) solid var(--line); }
+.am-tree-list, .am-tree-list ul { list-style: none; margin: 0; padding: 0; }
+.am-tree-col > .am-tree-list { margin: 8px 0 0 14px; }
+.am-tree-list ul { margin-left: 16px; }
+.am-tree-list li { position: relative; padding: 3px 0 3px 18px; }
+.am-tree-list li::before { content: ""; position: absolute; left: 0; top: 0.95em; width: 12px; border-top: 1px solid var(--ink-3); }
+.am-tree-list li::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 1px solid var(--ink-3); }
+.am-tree-list li:last-child::after { bottom: auto; height: 0.95em; }
+.am-tree-tag { font: 11px var(--font-mono); color: var(--ink-3); margin-right: 4px; }
+.am-tree code { font: 12px var(--font-mono); }
+.am-tree-sub { display: block; font-size: 11.5px; color: var(--ink-2); }
+.am-tree-hi > .am-tree-label { color: var(--accent); font-weight: 600; }
+
+/* ── Diagrams (flow / sequence) ───────────────── */
+.am-diagram { margin: 0; overflow-x: auto; text-align: center; }
+/* Embedded previews can lose html[data-theme]; the fallbacks keep diagrams readable, and defined theme variables still win. */
+.am-diagram svg { max-width: 100%; height: auto; font-family: var(--font-sans, sans-serif); }
+.am-diagram text { fill: var(--ink, #16181d); font-size: 13px; }
+.am-node-shape { fill: var(--paper, #ffffff); stroke: var(--line, #1d2026); stroke-width: var(--bw, 1.5px); }
+.am-node--hi .am-node-shape { fill: var(--accent-bg, #e4ecf8); stroke: var(--accent, #1d5fbf); }
+.am-node--hi text { fill: var(--accent, #1d5fbf); font-weight: 600; }
+.am-edge { fill: none; stroke: var(--ink-2, #4b5260); stroke-width: 1.3; }
+.am-edge--dashed { stroke-dasharray: 5 4; }
+.am-arrow { fill: var(--ink-2, #4b5260); }
+.am-edge-label rect { fill: var(--paper, #ffffff); }
+.am-diagram .am-edge-label text { fill: var(--accent, #1d5fbf); font-size: 11.5px; }
+.am-cluster { fill: var(--fill, #f3f5f8); stroke: var(--line-2, #d6dae1); stroke-width: 1; stroke-dasharray: 4 3; }
+.am-diagram .am-cluster-label { fill: var(--ink-2, #4b5260); font: 11px var(--font-mono, monospace); }
+.am-lifeline { stroke: var(--ink-3, #8b929e); stroke-width: 1; stroke-dasharray: 4 4; }
+.am-actor { fill: var(--paper, #ffffff); stroke: var(--line, #1d2026); stroke-width: var(--bw, 1.5px); }
+.am-note { fill: var(--warn-bg, #fdf3e2); stroke: var(--warn, #a8620a); stroke-width: 1; }
+.am-diagram .am-step { fill: var(--ink-3, #8b929e); font: 10px var(--font-mono, monospace); }
+
+/* ── doc template ────────────────────────── */
+.am-doc { max-width: 1120px; margin: 0 auto; padding: 40px 28px 64px; }
+.am-doc-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+.am-doc-layout--notoc { grid-template-columns: minmax(0, 1fr); max-width: 860px; }
+.am-toc { position: sticky; top: 24px; font-size: 13px; }
+.am-toc a { display: block; color: var(--ink-2); text-decoration: none; padding: 4px 0 4px 10px; border-left: 2px solid var(--line-2); }
+.am-toc a:hover { color: var(--ink); border-left-color: var(--accent); }
+.am-doc-body > .am-panel + .am-panel { margin-top: 20px; }
+
+/* ── Responsive and print ─────────────────────────── */
+@media (max-width: 1100px) {
+  .am-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .am-grid > .am-panel { grid-column: auto !important; }
+  .am-grid > .am-panel.am-span-wide { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 760px) {
+  .am-sheet, .am-doc { padding: 56px 12px 24px; }
+  .am-head { padding-right: 0; }
+  .am-grid { grid-template-columns: minmax(0, 1fr); }
+  .am-grid > .am-panel.am-span-wide { grid-column: auto !important; }
+  .am-doc-layout { grid-template-columns: minmax(0, 1fr); }
+  .am-toc { position: static; }
+  .am-timeline--h { grid-template-columns: minmax(0, 1fr); }
+  .am-tree-cols { grid-template-columns: minmax(0, 1fr); }
+  /* Tables and diagrams keep their size: the wrapper scrolls horizontally when they overflow. */
+  .am-md th, .am-md td { min-width: 6em; }
+  .am-diagram svg { max-width: none; }
+}
+.am-colophon { text-align: center; padding: 0 0 28px; font: 11px var(--font-mono); color: var(--ink-3); }
+
+@media print {
+  .am-toolbar { display: none; }
+  body { background: var(--paper); }
+  .am-panel { break-inside: avoid; box-shadow: none; }
+}
+.am-panel--bare { border: 0; background: transparent; box-shadow: none; }
+.am-panel--bare > .am-panel-body { padding: 0; }
+.am-panel--bare .am-kv { background: var(--paper); }
+
+
+html[data-theme] { --space-unit: 4px; --space-xs: 4px; --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --space-xl: 32px; --space-2xl: 48px; --text-xs: 12px; --text-sm: 13px; --text-md: 14px; --text-base: 16px; --text-lg: 21px; --text-xl: 30px; --target-size: 44px; }
+.am-layer-stack { display: grid; gap: 0; }
+.am-layer { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-md); background: var(--paper); }
+.am-layer-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-md); align-items: center; margin-bottom: var(--space-md); }
+.am-layer-num { width: 36px; height: 36px; display: grid; place-items: center; font: 600 var(--text-sm)/1 var(--font-mono); border-radius: 4px; background: var(--head-bg); color: var(--head-fg); }
+.am-layer-title { margin: 0; font-size: var(--text-base); font-weight: 650; }
+.am-layer-sub { margin: var(--space-xs) 0 0; font-size: var(--text-sm); color: var(--ink-2); }
+.am-layer-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-sm); }
+.am-layer-card { min-width: 0; border: 1px solid var(--line-2); background: var(--bg); border-radius: 6px; padding: var(--space-md); overflow-wrap: anywhere; }
+.am-layer-card-head { display: flex; align-items: center; gap: var(--space-sm); }
+.am-layer-icon { width: 24px; height: 24px; flex: 0 0 24px; color: var(--ink-3); }
+.am-layer-card h4 { font-size: var(--text-base); margin: 0; }
+.am-layer-tech { display: inline-block; margin: var(--space-sm) 0; font: 500 var(--text-xs)/1.5 var(--font-mono); color: var(--ink-2); }
+.am-layer-card p { font-size: var(--text-md); margin: 0; }
+.am-layer-card details { margin-top: var(--space-sm); }
+.am-layer-card summary { min-height: var(--target-size); cursor: pointer; font-size: var(--text-sm); color: var(--ink); padding: var(--space-sm) 0; text-decoration: underline; text-underline-offset: 3px; }
+.am-layer-card summary:hover { color: var(--focus); }
+.am-layer-card summary:active { background: var(--fill); }
+.am-layer-card details[open] summary { font-weight: 600; }
+.am-layer-detail { border-top: 1px solid var(--line); padding-top: var(--space-sm); color: var(--ink-2); font-size: var(--text-md); }
+.am-layer-connector { text-align: center; padding: var(--space-sm); color: var(--ink-2); font-size: var(--text-xs); }
+.am-layer-connector b { color: var(--ink); font-size: var(--text-base); margin-right: var(--space-sm); }
+.am-layer-empty { color: var(--ink-2); margin: 0; }
+@media (max-width: 600px) { .am-layer-grid { grid-template-columns: minmax(0,1fr); } }
+
+html[data-theme="blueprint"] .am-frame { border: 1px solid var(--line); padding: 30px; }
+html[data-theme="blueprint"] .am-frame::before {
+  content: ""; position: absolute; inset: 18px; border: 1px solid var(--line); pointer-events: none;
+}
+html[data-theme="blueprint"] .am-ruler {
+  display: flex; position: absolute; font: 10px/1 var(--font-mono); color: var(--ink-3);
+}
+@media (max-width: 760px) {
+  html[data-theme="blueprint"] .am-frame { padding: 0; border: 0; }
+  html[data-theme="blueprint"] .am-frame::before, html[data-theme="blueprint"] .am-ruler { display: none; }
+}
+
+html[data-theme="shadcn"] .am-panel-id { border-radius: 6px; min-width: 24px; height: 24px; margin: 9px 0 9px 14px; font-size: 12px; }
+html[data-theme="shadcn"] .am-panel-head { border-bottom-width: 1px; }
+html[data-theme="shadcn"] .am-kv { border-color: var(--line); border-radius: var(--radius); overflow: hidden; }
+
+html[data-theme="agent-skill"] body { font-size: var(--text-base); line-height: 1.5; }
+html[data-theme="agent-skill"] .am-doc { max-width: 1440px; padding: var(--space-2xl) var(--space-xl); }
+html[data-theme="agent-skill"] .am-doc-layout { grid-template-columns: 216px minmax(0,1fr); gap: var(--space-xl); }
+html[data-theme="agent-skill"] .am-head { padding-right: 0; margin-top: var(--space-xl); max-width: 900px; }
+html[data-theme="agent-skill"] .am-head h1 { font-size: var(--text-xl); line-height: 1.2; font-weight: 650; }
+html[data-theme="agent-skill"] .am-sub { margin-top: var(--space-sm); font-size: var(--text-base); }
+html[data-theme="agent-skill"] .am-intro { max-width: 76ch; }
+html[data-theme="agent-skill"] .am-toolbar { position: static; padding: var(--space-md) var(--space-xl) 0; justify-content: flex-end; flex-wrap: wrap; }
+html[data-theme="agent-skill"] .am-btn { min-height: var(--target-size); font-size: var(--text-sm); border-color: var(--control-border); padding: var(--space-sm) var(--space-md); }
+html[data-theme="agent-skill"] .am-btn:hover { background: var(--fill); }
+html[data-theme="agent-skill"] .am-btn:active { background: var(--accent-bg); }
+html[data-theme="agent-skill"] .am-btn:disabled { opacity: .55; cursor: not-allowed; }
+html[data-theme="agent-skill"] :is(a,button,summary):focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+html[data-theme="agent-skill"] .am-panel-head { border-color: var(--line-2); background: var(--paper); }
+html[data-theme="agent-skill"] .am-panel-id { border-radius: 4px; min-width: 28px; height: 28px; margin: var(--space-md) 0 var(--space-md) var(--space-lg); padding: 0 var(--space-sm); font-size: var(--text-xs); }
+html[data-theme="agent-skill"] .am-panel-head h2 { font-size: var(--text-lg); padding: var(--space-md); line-height: 1.35; }
+html[data-theme="agent-skill"] .am-panel-meta { font-family: var(--font-sans); font-size: var(--text-xs); }
+html[data-theme="agent-skill"] .am-panel-body { padding: var(--space-lg); }
+html[data-theme="agent-skill"] .am-doc-body > .am-panel + .am-panel { margin-top: var(--space-lg); }
+html[data-theme="agent-skill"] .am-md li + li { margin-top: var(--space-sm); }
+html[data-theme="agent-skill"] .am-md h3 { font-size: var(--text-base); }
+html[data-theme="agent-skill"] .am-md th, html[data-theme="agent-skill"] .am-md td { padding: var(--space-sm) var(--space-md); font-size: var(--text-md); }
+html[data-theme="agent-skill"] .am-md a { text-decoration: underline; text-underline-offset: 3px; }
+html[data-theme="agent-skill"] .am-toc { top: var(--space-lg); }
+html[data-theme="agent-skill"] .am-toc a { min-height: var(--target-size); padding: var(--space-sm) var(--space-md); display: flex; align-items: center; font-size: var(--text-md); }
+html[data-theme="agent-skill"] .am-callout { padding: var(--space-md); }
+html[data-theme="agent-skill"] .am-layer-stack { display: grid; gap: 0; }
+html[data-theme="agent-skill"] .am-layer { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-md); background: var(--paper); }
+html[data-theme="agent-skill"] .am-layer-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-md); align-items: center; margin-bottom: var(--space-md); }
+html[data-theme="agent-skill"] .am-layer-num { width: 36px; height: 36px; display: grid; place-items: center; font: 600 var(--text-sm)/1 var(--font-mono); border-radius: 4px; background: var(--head-bg); color: var(--head-fg); }
+html[data-theme="agent-skill"] .am-layer-title { margin: 0; font-size: var(--text-base); font-weight: 650; }
+html[data-theme="agent-skill"] .am-layer-sub { margin: var(--space-xs) 0 0; font-size: var(--text-sm); color: var(--ink-2); }
+html[data-theme="agent-skill"] .am-layer-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-sm); }
+html[data-theme="agent-skill"] .am-layer-card { min-width: 0; border: 1px solid var(--line-2); background: var(--bg); border-radius: 6px; padding: var(--space-md); overflow-wrap: anywhere; }
+html[data-theme="agent-skill"] .am-layer-card-head { display: flex; align-items: center; gap: var(--space-sm); }
+html[data-theme="agent-skill"] .am-layer-icon { width: 24px; height: 24px; flex: 0 0 24px; color: var(--ink-3); }
+html[data-theme="agent-skill"] .am-layer-card h4 { font-size: var(--text-base); margin: 0; }
+html[data-theme="agent-skill"] .am-layer-tech { display: inline-block; margin: var(--space-sm) 0; font: 500 var(--text-xs)/1.5 var(--font-mono); color: var(--ink-2); }
+html[data-theme="agent-skill"] .am-layer-card p { font-size: var(--text-md); margin: 0; }
+html[data-theme="agent-skill"] .am-layer-card details { margin-top: var(--space-sm); }
+html[data-theme="agent-skill"] .am-layer-card summary { min-height: var(--target-size); cursor: pointer; font-size: var(--text-sm); color: var(--ink); padding: var(--space-sm) 0; text-decoration: underline; text-underline-offset: 3px; }
+html[data-theme="agent-skill"] .am-layer-card summary:hover { color: var(--focus); }
+html[data-theme="agent-skill"] .am-layer-card summary:active { background: var(--fill); }
+html[data-theme="agent-skill"] .am-layer-card details[open] summary { font-weight: 600; }
+html[data-theme="agent-skill"] .am-layer-detail { border-top: 1px solid var(--line); padding-top: var(--space-sm); color: var(--ink-2); font-size: var(--text-md); }
+html[data-theme="agent-skill"] .am-layer-connector { text-align: center; padding: var(--space-sm); color: var(--ink-2); font-size: var(--text-xs); }
+html[data-theme="agent-skill"] .am-layer-connector b { color: var(--ink); font-size: var(--text-base); margin-right: var(--space-sm); }
+html[data-theme="agent-skill"] .am-layer-empty { color: var(--ink-2); margin: 0; }
+@media (max-width: 900px) {
+  html[data-theme="agent-skill"] .am-doc-layout { grid-template-columns: minmax(0,1fr); }
+  html[data-theme="agent-skill"] .am-toc { position: static; display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+  html[data-theme="agent-skill"] .am-toc a { border: 1px solid var(--line); border-radius: 4px; }
+}
+@media (max-width: 600px) {
+  html[data-theme="agent-skill"] .am-doc { padding: var(--space-lg) var(--space-md); }
+  html[data-theme="agent-skill"] .am-toolbar { padding: var(--space-md); }
+  html[data-theme="agent-skill"] .am-head { margin-top: 0; }
+  html[data-theme="agent-skill"] .am-panel-body { padding: var(--space-md); }
+  html[data-theme="agent-skill"] .am-panel-id { margin-left: var(--space-md); }
+  html[data-theme="agent-skill"] .am-panel-head h2 { font-size: var(--text-base); }
+  html[data-theme="agent-skill"] .am-panel-meta { display: none; }
+  html[data-theme="agent-skill"] .am-layer-grid { grid-template-columns: minmax(0,1fr); }
+}
+@media (prefers-reduced-motion: reduce) { html[data-theme="agent-skill"] *, html[data-theme="agent-skill"] *::before, html[data-theme="agent-skill"] *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="am-toolbar">
+<button class="am-btn" type="button" data-am="theme" data-labels="{&quot;blueprint&quot;:&quot;Giao diện: Bản vẽ&quot;,&quot;shadcn&quot;:&quot;Giao diện: Thẻ&quot;,&quot;agent-skill&quot;:&quot;Giao diện: Agent Skill&quot;}">Giao diện: Agent Skill</button>
+<button class="am-btn" type="button" data-am="mode" data-labels="{&quot;auto&quot;:&quot;Chế độ: Tự động&quot;,&quot;light&quot;:&quot;Chế độ: Sáng&quot;,&quot;dark&quot;:&quot;Chế độ: Tối&quot;}">Chế độ: Sáng</button>
+<button class="am-btn" type="button" data-am="copy" data-done="Đã sao chép ✓">Sao chép nguồn</button>
+</div>
+<main class="am-doc">
+<header class="am-head"><h1>Chunks reading</h1><p class="am-sub">Một lớp học. Một nhịp đọc. Hai giao diện.</p><div class="am-intro am-md"><div class="am-md"><p><strong>Đề xuất, chưa triển khai.</strong> Dùng AI Studio để build React + Node.js; dùng Firebase cho đăng nhập, dữ liệu và realtime.</p>
+<p>Đọc từ trên xuống để hiểu trách nhiệm từng lớp. Mở <strong>Xem chi tiết</strong> khi cần thông tin kỹ thuật.</p>
+</div></div></header>
+<div class="am-doc-layout">
+<nav class="am-toc" aria-label="Mục lục"><a href="#panel-A">A · Kiến trúc từng lớp</a><a href="#panel-B">B · Một lần teacher nhấn “Bắt đầu”</a><a href="#panel-C">C · Ba nhóm cấu hình đọc</a><a href="#panel-D">D · Nhập bài mà không bị mắc kẹt</a><a href="#panel-E">E · Từ bản thiết kế đến lớp học thật</a><a href="#panel-F">F · Năm quyết định trước khi tạo Stitch</a></nav><div class="am-doc-body">
+<section class="am-panel" id="panel-A">
+<header class="am-panel-head"><span class="am-panel-id">A</span><h2>Kiến trúc từng lớp</h2><span class="am-panel-meta">Đề xuất MVP</span></header>
+<div class="am-panel-body"><div class="am-layer-stack" role="group" aria-label="Kiến trúc Chunks reading theo trách nhiệm"><section class="am-layer" data-step="0" data-key="Người dùng"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">01</span><div><h3 class="am-layer-title">Người dùng</h3><p class="am-layer-sub">Ai điều khiển, ai theo dõi?</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 9-5 9 5-9 5-9-5Zm4 3v5c3 3 7 3 10 0v-5M21 8v8"/></svg><h4>Teacher</h4></div><span class="am-layer-tech">Chủ phòng</span><p>Chọn bài và điều khiển nhịp đọc.</p><details><summary>Xem chi tiết: Teacher</summary><div class="am-layer-detail">Teacher quản lý nội dung và phòng của mình. Không tự động có quyền xem dữ liệu teacher khác.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M17 5a3 3 0 0 1 0 6M21 21v-3a6 6 0 0 0-4-5"/></svg><h4>Học viên</h4></div><span class="am-layer-tech">Thành viên phòng</span><p>Vào bằng link hoặc mã; xem bài cùng lớp.</p><details><summary>Xem chi tiết: Học viên</summary><div class="am-layer-detail">Cách đăng nhập chưa chốt. Đề xuất mã phòng + tên, với anonymous identity và quyền thành viên được xác minh.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Hai vai trò · hai giao diện</div><section class="am-layer" data-step="1" data-key="Giao diện"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">02</span><div><h3 class="am-layer-title">Giao diện</h3><p class="am-layer-sub">Browser hiển thị, không quyết định quyền</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 16v5"/></svg><h4>Teacher console</h4></div><span class="am-layer-tech">React + TypeScript</span><p>Thư viện, editor, setup và điều khiển lớp.</p><details><summary>Xem chi tiết: Teacher console</summary><div class="am-layer-detail">Có preview màn học viên, trước/sau, pause, resume, replay và kết thúc phòng.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v16M3 4c3-1 6-1 9 1 3-2 6-2 9-1v16c-3-1-6-1-9 1-3-2-6-2-9-1V4Z"/></svg><h4>Student reader</h4></div><span class="am-layer-tech">React + TypeScript</span><p>Chữ lớn, highlight và hiệu ứng đọc.</p><details><summary>Xem chi tiết: Student reader</summary><div class="am-layer-detail">Hiệu ứng chạy trên máy học viên theo mốc server. Không quay màn hình và không dùng camera theo dõi mắt.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Lệnh teacher → HTTPS → xác minh phía server</div><section class="am-layer" data-step="2" data-key="Backend và quyền"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">03</span><div><h3 class="am-layer-title">Backend và quyền</h3><p class="am-layer-sub">Nguồn xác thực lệnh điều khiển</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6h.01M7 17h.01M11 6h6M11 17h6"/></svg><h4>Room API</h4></div><span class="am-layer-tech">Node.js</span><p>Xác minh và ghi trạng thái phòng.</p><details><summary>Xem chi tiết: Room API</summary><div class="am-layer-detail">Kiểm tra identity, quyền sở hữu và membership. Học viên gọi API điều khiển trực tiếp vẫn phải bị từ chối.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4v5c0 5-5 8-9 10-4-2-9-5-9-10V7l9-4Z"/><path d="m8 12 3 3 5-6"/></svg><h4>Danh tính</h4></div><span class="am-layer-tech">Firebase Auth</span><p>Phân biệt chủ phòng và người tham gia.</p><details><summary>Xem chi tiết: Danh tính</summary><div class="am-layer-detail">Không tin role từ browser. Secrets, service credentials và API keys chỉ ở server.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Ghi hợp lệ · đọc realtime theo quyền</div><section class="am-layer" data-step="3" data-key="Dữ liệu và đồng bộ"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">04</span><div><h3 class="am-layer-title">Dữ liệu và đồng bộ</h3><p class="am-layer-sub">Giữ một trạng thái đọc chung</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 4 18 4 18 0V5M3 12c0 4 18 4 18 0"/></svg><h4>Nội dung bền vững</h4></div><span class="am-layer-tech">Firestore</span><p>Lưu category, bài và phiên bản bài.</p><details><summary>Xem chi tiết: Nội dung bền vững</summary><div class="am-layer-detail">Chốt articleVersionId khi bắt đầu phiên. Sửa thư viện không làm đổi bài đang được lớp sử dụng.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7a9 9 0 0 0-15-3L2 7m0-5v5h5M4 17a9 9 0 0 0 15 3l3-3m0 5v-5h-5"/></svg><h4>Trạng thái phòng</h4></div><span class="am-layer-tech">Firestore listeners</span><p>Chia sẻ câu/đoạn, timing và tiến độ.</p><details><summary>Xem chi tiết: Trạng thái phòng</summary><div class="am-layer-detail">Snapshot gồm revision, unitIndex, status, startedAt và pausedElapsedMs. Client ước lượng lệch đồng hồ; reconnect lấy trạng thái hiện tại.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Dịch vụ hỗ trợ · không nằm trong từng frame hiệu ứng</div><section class="am-layer" data-step="4" data-key="Import và triển khai"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">05</span><div><h3 class="am-layer-title">Import và triển khai</h3><p class="am-layer-sub">Mở rộng nội dung, đưa ứng dụng lên web</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></svg><h4>Nhập bài và annotations</h4></div><span class="am-layer-tech">Server import · Gemini tùy chọn</span><p>Text, TXT, URL; teacher xem và duyệt.</p><details><summary>Xem chi tiết: Nhập bài và annotations</summary><div class="am-layer-detail">URL phải chặn nội mạng, kiểm tra redirect và giới hạn timeout/kích thước. Gemini chỉ gợi ý idioms/phrases; sai thì chỉnh tay.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19a5 5 0 0 1-1-10 7 7 0 0 1 13-2 6 6 0 0 1 0 12H6Z"/></svg><h4>Hosting</h4></div><span class="am-layer-tech">Cloud Run</span><p>Triển khai app do AI Studio tạo.</p><details><summary>Xem chi tiết: Hosting</summary><div class="am-layer-detail">Firebase lưu dữ liệu ngoài bộ nhớ server. Kiểm tra chi phí, secrets, phân quyền và quy mô lớp trước release.</div></details></article></div></section></div>
+<div class="am-md"><p><strong>Mũi tên giữa các lớp biểu thị ranh giới trách nhiệm.</strong> Lớp cuối là dịch vụ hỗ trợ, không phải bước bắt buộc của mọi request.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-B">
+<header class="am-panel-head"><span class="am-panel-id">B</span><h2>Một lần teacher nhấn “Bắt đầu”</h2><span class="am-panel-meta">Luồng thực tế</span></header>
+<div class="am-panel-body"><figure class="am-diagram am-seq"><svg viewBox="0 0 994 364" width="994" height="364" role="img" aria-label="Sơ đồ tuần tự: Teacher, Node API, Firebase Auth, Firestore, Học viên, Browser" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><line class="am-lifeline" x1="54" y1="42" x2="54" y2="360"/><g data-key="Teacher"><rect class="am-actor" x="12" y="8" width="84" height="34" rx="2"/><text x="54" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Teacher</text></g><line class="am-lifeline" x1="204" y1="42" x2="204" y2="360"/><g data-key="Node API"><rect class="am-actor" x="161.7" y="8" width="84.4" height="34" rx="2"/><text x="204" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Node API</text></g><line class="am-lifeline" x1="344.8" y1="42" x2="344.8" y2="360"/><g data-key="Firebase Auth"><rect class="am-actor" x="288.3" y="8" width="113" height="34" rx="2"/><text x="344.8" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Firebase Auth</text></g><line class="am-lifeline" x1="471.3" y1="42" x2="471.3" y2="360"/><g data-key="Firestore"><rect class="am-actor" x="429.3" y="8" width="84" height="34" rx="2"/><text x="471.3" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Firestore</text></g><line class="am-lifeline" x1="722.7" y1="42" x2="722.7" y2="360"/><g data-key="Học viên"><rect class="am-actor" x="680.7" y="8" width="84" height="34" rx="2"/><text x="722.7" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Học viên</text></g><line class="am-lifeline" x1="939.7" y1="42" x2="939.7" y2="360"/><g data-key="Browser"><rect class="am-actor" x="897.7" y="8" width="84" height="34" rx="2"/><text x="939.7" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Browser</text></g><g data-step="0"><text x="129" y="70" text-anchor="middle">Bắt đầu đơn vị đọc</text><path class="am-edge" d="M54,80 L202,80" marker-end="url(#am1-arrow)"/><text class="am-step" x="60" y="74" text-anchor="start">1</text></g><g data-step="1"><text x="274.4" y="110" text-anchor="middle">Xác minh identity</text><path class="am-edge" d="M204,120 L342.8,120" marker-end="url(#am1-arrow)"/><text class="am-step" x="210" y="114" text-anchor="start">2</text></g><g data-step="2"><text x="337.6" y="150" text-anchor="middle">Kiểm tra quyền và ghi snapshot</text><path class="am-edge" d="M204,160 L469.3,160" marker-end="url(#am1-arrow)"/><text class="am-step" x="210" y="154" text-anchor="start">3</text></g><g data-step="3"><text x="597" y="190" text-anchor="middle">Snapshot mới qua listener được cấp</text><text x="597" y="206" text-anchor="middle">quyền</text><path class="am-edge am-edge--dashed" d="M471.3,216 L720.7,216" marker-end="url(#am1-arrow)"/><text class="am-step" x="477.3" y="210" text-anchor="start">4</text></g><g data-step="4"><rect class="am-note" x="622.1" y="240" width="201.2" height="28" rx="2"/><text x="722.7" y="254" text-anchor="middle" dominant-baseline="central" font-size="12">Nhận mốc server; tự tính tiến độ</text></g><g data-step="5"><line class="am-lifeline" x1="12" y1="294" x2="981.7" y2="294"/><rect class="am-actor" x="442.5" y="284" width="108.8" height="20" rx="2"/><text x="496.9" y="294" text-anchor="middle" dominant-baseline="central" font-size="12">Tại mỗi thiết bị</text></g><g data-step="6"><text x="831.2" y="324" text-anchor="middle">Hiển thị chữ và chạy hiệu ứng</text><path class="am-edge" d="M722.7,334 L937.7,334" marker-end="url(#am1-arrow)"/><text class="am-step" x="728.7" y="328" text-anchor="start">5</text></g></svg></figure>
+<div class="am-md"><ul>
+<li>Backend tăng <code>revision</code> để nhận biết trạng thái mới.</li>
+<li>Không gửi sự kiện cho từng từ hoặc từng frame.</li>
+<li>Vào muộn hoặc reconnect: lấy snapshot hiện tại, không đọc lại từ đầu.</li>
+<li>Mất mạng: báo trạng thái và chờ đồng bộ, không giả vờ đang kết nối.</li>
+</ul>
+</div></div>
+</section>
+<section class="am-panel" id="panel-C">
+<header class="am-panel-head"><span class="am-panel-id">C</span><h2>Ba nhóm cấu hình đọc</h2><span class="am-panel-meta">Cần bạn duyệt</span></header>
+<div class="am-panel-body"><div class="am-layer-stack" role="group" aria-label="Cấu hình đọc độc lập"><section class="am-layer" data-step="0" data-key="Chia nội dung"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">01</span><div><h3 class="am-layer-title">Chia nội dung</h3><p class="am-layer-sub">Học viên thấy bao nhiêu chữ?</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v16M3 4c3-1 6-1 9 1 3-2 6-2 9-1v16c-3-1-6-1-9 1-3-2-6-2-9-1V4Z"/></svg><h4>Câu</h4></div><span class="am-layer-tech">Sentence</span><p>Hiển thị một câu mỗi lần.</p></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v16M3 4c3-1 6-1 9 1 3-2 6-2 9-1v16c-3-1-6-1-9 1-3-2-6-2-9-1V4Z"/></svg><h4>Đoạn</h4></div><span class="am-layer-tech">Paragraph</span><p>Hiển thị một đoạn mỗi lần.</p></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Kết hợp lớp nhấn mạnh</div><section class="am-layer" data-step="1" data-key="Highlight"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">02</span><div><h3 class="am-layer-title">Highlight</h3><p class="am-layer-sub">Chú ý đến cách dùng tiếng Anh</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3 3-6Z"/></svg><h4>Idioms và phrases</h4></div><span class="am-layer-tech">Bật / tắt</span><p>Nhấn mạnh cụm từ trên câu hoặc đoạn.</p><details><summary>Xem chi tiết: Idioms và phrases</summary><div class="am-layer-detail">Đây là đề xuất. Nếu bạn muốn highlight là mode riêng, PRD sẽ đổi theo lựa chọn đó.</div></details></article></div></section><div class="am-layer-connector"><b aria-hidden="true">↓</b>Chọn nhịp và hiệu ứng</div><section class="am-layer" data-step="2" data-key="Timing và hiệu ứng"><header class="am-layer-head"><span class="am-layer-num" aria-hidden="true">03</span><div><h3 class="am-layer-title">Timing và hiệu ứng</h3><p class="am-layer-sub">Chữ tồn tại và biến mất thế nào?</p></div></header><div class="am-layer-grid"><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h4>Fixed / dynamic</h4></div><span class="am-layer-tech">Giây / WPM</span><p>Thời lượng cố định hoặc theo số từ.</p><details><summary>Xem chi tiết: Fixed / dynamic</summary><div class="am-layer-detail">Dynamic đề xuất: số từ × 60.000 / WPM, kèm min/max. Chưa chốt 3 giây là giữ chữ, xóa chữ hay tổng thời gian.</div></details></article><article class="am-layer-card"><div class="am-layer-card-head"><svg class="am-layer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 15 9-11a2 2 0 0 1 3 0l5 5a2 2 0 0 1 0 3l-8 9H8l-4-4a2 2 0 0 1 0-2Zm5-6 9 8M13 21h9"/></svg><h4>Reading guide + eraser</h4></div><span class="am-layer-tech">Tùy chọn độc lập</span><p>Dẫn hướng đọc; che chữ dần, không nhảy dòng.</p><details><summary>Xem chi tiết: Reading guide + eraser</summary><div class="am-layer-detail">Có chế độ chữ tĩnh và giảm chuyển động. Reading guide không phải eye tracking bằng camera.</div></details></article></div></section></div></div>
+</section>
+<section class="am-panel" id="panel-D">
+<header class="am-panel-head"><span class="am-panel-id">D</span><h2>Nhập bài mà không bị mắc kẹt</h2><span class="am-panel-meta">Phạm vi đề xuất</span></header>
+<div class="am-panel-body"><ol class="am-timeline am-timeline--v"><li class="am-tl-item"><span class="am-tl-when">01</span><span class="am-tl-dot"></span><span class="am-tl-title">Nguồn</span><span class="am-tl-text">News, TED transcript hoặc bài truyền cảm hứng.</span></li><li class="am-tl-item"><span class="am-tl-when">02</span><span class="am-tl-dot"></span><span class="am-tl-title">Import MVP</span><span class="am-tl-text">Dán text, TXT hoặc URL công khai có thể truy cập.</span></li><li class="am-tl-item"><span class="am-tl-when">03</span><span class="am-tl-dot"></span><span class="am-tl-title">Preview và sửa</span><span class="am-tl-text">Teacher kiểm tra nội dung, nguồn, câu và đoạn.</span></li><li class="am-tl-item"><span class="am-tl-when">04</span><span class="am-tl-dot"></span><span class="am-tl-title">Duyệt cụm từ</span><span class="am-tl-text">Chỉnh tay hoặc duyệt gợi ý Gemini.</span></li><li class="am-tl-item"><span class="am-tl-when">05</span><span class="am-tl-dot"></span><span class="am-tl-title">Lưu và dùng</span><span class="am-tl-text">Phân loại category; chốt phiên bản khi mở lớp.</span></li></ol>
+<div class="am-md"><p><strong>Fallback:</strong> URL không lấy được → dán text. Không hứa đọc mọi TED/video URL hoặc vượt paywall.</p>
+<p>PDF/DOCX đề xuất ở giai đoạn sau. PDF scan cần OCR; video cần transcription và kiểm tra quyền sử dụng.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-E">
+<header class="am-panel-head"><span class="am-panel-id">E</span><h2>Từ bản thiết kế đến lớp học thật</h2><span class="am-panel-meta">Không dùng mega-prompt</span></header>
+<div class="am-panel-body"><ol class="am-timeline am-timeline--v"><li class="am-tl-item"><span class="am-tl-when">01</span><span class="am-tl-dot"></span><span class="am-tl-title">Chốt PRD</span><span class="am-tl-text">Quyền, mode, timing, reconnect và tiêu chí nghiệm thu.</span></li><li class="am-tl-item"><span class="am-tl-when">02</span><span class="am-tl-dot"></span><span class="am-tl-title">Stitch</span><span class="am-tl-text">Library, editor, setup, live console, join và student reader.</span></li><li class="am-tl-item"><span class="am-tl-when">03</span><span class="am-tl-dot"></span><span class="am-tl-title">AI Studio: skeleton</span><span class="am-tl-text">Bài fixture; hai tab chạy câu/đoạn, pause và replay.</span></li><li class="am-tl-item"><span class="am-tl-when">04</span><span class="am-tl-dot"></span><span class="am-tl-title">Backend thật</span><span class="am-tl-text">Auth, lưu bài, room, realtime; thử trên hai thiết bị.</span></li><li class="am-tl-item"><span class="am-tl-when">05</span><span class="am-tl-dot"></span><span class="am-tl-title">Import và kiểm thử</span><span class="am-tl-text">URL lỗi có fallback; annotation sai có chỉnh tay.</span></li><li class="am-tl-item"><span class="am-tl-when">06</span><span class="am-tl-dot"></span><span class="am-tl-title">Release gate</span><span class="am-tl-text">Kiểm tra secrets, quyền, chi phí và số học viên mục tiêu.</span></li></ol>
+<div class="am-md"><p><strong>Phong cách app:</strong> đọc sách, nền giấy ngà, chữ mực, serif cho bài đọc. Theme của tài liệu này không thay thế brand của app.</p>
+<p><strong>Logo app:</strong> <code>C:/Users/gensh/Downloads/logo.png</code>. Cần upload asset cho Stitch/AI Studio; đường dẫn local không phải URL công khai.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-F">
+<header class="am-panel-head"><span class="am-panel-id">F</span><h2>Năm quyết định trước khi tạo Stitch</h2></header>
+<div class="am-panel-body"><div class="am-md"><div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>Cần chốt</th>
+<th>Đề xuất mặc định</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Học viên vào phòng thế nào?</td>
+<td>Mã/link + tên; anonymous identity</td>
+</tr>
+<tr>
+<td>Highlight riêng hay kết hợp?</td>
+<td>Câu/đoạn kết hợp highlight</td>
+</tr>
+<tr>
+<td>3 giây nghĩa là gì?</td>
+<td>Tách thời gian giữ chữ và thời gian xóa</td>
+</tr>
+<tr>
+<td>Bao nhiêu học viên/phòng?</td>
+<td>Thử MVP với 30; chưa đo năng lực thực tế</td>
+</tr>
+<tr>
+<td>Ngôn ngữ và import ban đầu?</td>
+<td>UI tiếng Việt, bài tiếng Anh; text/TXT/URL</td>
+</tr>
+</tbody></table></div>
+<p><strong>Trạng thái:</strong> chưa tạo Stitch, chưa provision Firebase, chưa build/deploy ứng dụng.</p>
+<p><strong>Cơ sở:</strong> yêu cầu của bạn và tài liệu Google về <a href="https://ai.google.dev/gemini-api/docs/aistudio-build-mode">AI Studio Build</a>, <a href="https://ai.google.dev/gemini-api/docs/aistudio-fullstack">full-stack</a>.</p>
+<p>Bản kỹ thuật đầy đủ được giữ trong <code>docs/architecture-proposal.md</code>. Các quyết định ở đây vẫn là đề xuất.</p>
+</div></div>
+</section>
+</div>
+</div>
+</main>
+<footer class="am-colophon">Generated by Answer me with HTML 0.4.9 · 2026-10-07 15:10</footer>
+<textarea id="am-source" hidden readonly aria-hidden="true">---
+title: Chunks reading
+subtitle: Một lớp học. Một nhịp đọc. Hai giao diện.
+lang: vi
+template: doc
+theme: agent-skill
+mode: light
+---
+**Đề xuất, chưa triển khai.** Dùng AI Studio để build React + Node.js; dùng Firebase cho đăng nhập, dữ liệu và realtime.
+
+Đọc từ trên xuống để hiểu trách nhiệm từng lớp. Mở **Xem chi tiết** khi cần thông tin kỹ thuật.
+
+## A Kiến trúc từng lớp {meta=&quot;Đề xuất MVP&quot;}
+
+```layers Kiến trúc Chunks reading theo trách nhiệm
+# Người dùng | Ai điều khiển, ai theo dõi?
+teacher | Teacher | Chủ phòng | Chọn bài và điều khiển nhịp đọc. | Teacher quản lý nội dung và phòng của mình. Không tự động có quyền xem dữ liệu teacher khác.
+users | Học viên | Thành viên phòng | Vào bằng link hoặc mã; xem bài cùng lớp. | Cách đăng nhập chưa chốt. Đề xuất mã phòng + tên, với anonymous identity và quyền thành viên được xác minh.
+&gt; Hai vai trò · hai giao diện
+# Giao diện | Browser hiển thị, không quyết định quyền
+monitor | Teacher console | React + TypeScript | Thư viện, editor, setup và điều khiển lớp. | Có preview màn học viên, trước/sau, pause, resume, replay và kết thúc phòng.
+book | Student reader | React + TypeScript | Chữ lớn, highlight và hiệu ứng đọc. | Hiệu ứng chạy trên máy học viên theo mốc server. Không quay màn hình và không dùng camera theo dõi mắt.
+&gt; Lệnh teacher → HTTPS → xác minh phía server
+# Backend và quyền | Nguồn xác thực lệnh điều khiển
+server | Room API | Node.js | Xác minh và ghi trạng thái phòng. | Kiểm tra identity, quyền sở hữu và membership. Học viên gọi API điều khiển trực tiếp vẫn phải bị từ chối.
+shield | Danh tính | Firebase Auth | Phân biệt chủ phòng và người tham gia. | Không tin role từ browser. Secrets, service credentials và API keys chỉ ở server.
+&gt; Ghi hợp lệ · đọc realtime theo quyền
+# Dữ liệu và đồng bộ | Giữ một trạng thái đọc chung
+database | Nội dung bền vững | Firestore | Lưu category, bài và phiên bản bài. | Chốt articleVersionId khi bắt đầu phiên. Sửa thư viện không làm đổi bài đang được lớp sử dụng.
+sync | Trạng thái phòng | Firestore listeners | Chia sẻ câu/đoạn, timing và tiến độ. | Snapshot gồm revision, unitIndex, status, startedAt và pausedElapsedMs. Client ước lượng lệch đồng hồ; reconnect lấy trạng thái hiện tại.
+&gt; Dịch vụ hỗ trợ · không nằm trong từng frame hiệu ứng
+# Import và triển khai | Mở rộng nội dung, đưa ứng dụng lên web
+import | Nhập bài và annotations | Server import · Gemini tùy chọn | Text, TXT, URL; teacher xem và duyệt. | URL phải chặn nội mạng, kiểm tra redirect và giới hạn timeout/kích thước. Gemini chỉ gợi ý idioms/phrases; sai thì chỉnh tay.
+cloud | Hosting | Cloud Run | Triển khai app do AI Studio tạo. | Firebase lưu dữ liệu ngoài bộ nhớ server. Kiểm tra chi phí, secrets, phân quyền và quy mô lớp trước release.
+```
+
+**Mũi tên giữa các lớp biểu thị ranh giới trách nhiệm.** Lớp cuối là dịch vụ hỗ trợ, không phải bước bắt buộc của mọi request.
+
+## B Một lần teacher nhấn “Bắt đầu” {meta=&quot;Luồng thực tế&quot;}
+
+```sequence num
+Teacher -&gt; Node API: Bắt đầu đơn vị đọc
+Node API -&gt; Firebase Auth: Xác minh identity
+Node API -&gt; Firestore: Kiểm tra quyền và ghi snapshot
+Firestore --&gt; Học viên: Snapshot mới qua listener được cấp quyền
+note Học viên: Nhận mốc server; tự tính tiến độ
+== Tại mỗi thiết bị ==
+Học viên -&gt; Browser: Hiển thị chữ và chạy hiệu ứng
+```
+
+- Backend tăng `revision` để nhận biết trạng thái mới.
+- Không gửi sự kiện cho từng từ hoặc từng frame.
+- Vào muộn hoặc reconnect: lấy snapshot hiện tại, không đọc lại từ đầu.
+- Mất mạng: báo trạng thái và chờ đồng bộ, không giả vờ đang kết nối.
+
+## C Ba nhóm cấu hình đọc {meta=&quot;Cần bạn duyệt&quot;}
+
+```layers Cấu hình đọc độc lập
+# Chia nội dung | Học viên thấy bao nhiêu chữ?
+book | Câu | Sentence | Hiển thị một câu mỗi lần.
+book | Đoạn | Paragraph | Hiển thị một đoạn mỗi lần.
+&gt; Kết hợp lớp nhấn mạnh
+# Highlight | Chú ý đến cách dùng tiếng Anh
+spark | Idioms và phrases | Bật / tắt | Nhấn mạnh cụm từ trên câu hoặc đoạn. | Đây là đề xuất. Nếu bạn muốn highlight là mode riêng, PRD sẽ đổi theo lựa chọn đó.
+&gt; Chọn nhịp và hiệu ứng
+# Timing và hiệu ứng | Chữ tồn tại và biến mất thế nào?
+clock | Fixed / dynamic | Giây / WPM | Thời lượng cố định hoặc theo số từ. | Dynamic đề xuất: số từ × 60.000 / WPM, kèm min/max. Chưa chốt 3 giây là giữ chữ, xóa chữ hay tổng thời gian.
+eraser | Reading guide + eraser | Tùy chọn độc lập | Dẫn hướng đọc; che chữ dần, không nhảy dòng. | Có chế độ chữ tĩnh và giảm chuyển động. Reading guide không phải eye tracking bằng camera.
+```
+
+## D Nhập bài mà không bị mắc kẹt {meta=&quot;Phạm vi đề xuất&quot;}
+
+```timeline v
+01 | Nguồn | News, TED transcript hoặc bài truyền cảm hứng.
+02 | Import MVP | Dán text, TXT hoặc URL công khai có thể truy cập.
+03 | Preview và sửa | Teacher kiểm tra nội dung, nguồn, câu và đoạn.
+04 | Duyệt cụm từ | Chỉnh tay hoặc duyệt gợi ý Gemini.
+05 | Lưu và dùng | Phân loại category; chốt phiên bản khi mở lớp.
+```
+
+**Fallback:** URL không lấy được → dán text. Không hứa đọc mọi TED/video URL hoặc vượt paywall.
+
+PDF/DOCX đề xuất ở giai đoạn sau. PDF scan cần OCR; video cần transcription và kiểm tra quyền sử dụng.
+
+## E Từ bản thiết kế đến lớp học thật {meta=&quot;Không dùng mega-prompt&quot;}
+
+```timeline v
+01 | Chốt PRD | Quyền, mode, timing, reconnect và tiêu chí nghiệm thu.
+02 | Stitch | Library, editor, setup, live console, join và student reader.
+03 | AI Studio: skeleton | Bài fixture; hai tab chạy câu/đoạn, pause và replay.
+04 | Backend thật | Auth, lưu bài, room, realtime; thử trên hai thiết bị.
+05 | Import và kiểm thử | URL lỗi có fallback; annotation sai có chỉnh tay.
+06 | Release gate | Kiểm tra secrets, quyền, chi phí và số học viên mục tiêu.
+```
+
+**Phong cách app:** đọc sách, nền giấy ngà, chữ mực, serif cho bài đọc. Theme của tài liệu này không thay thế brand của app.
+
+**Logo app:** `C:/Users/gensh/Downloads/logo.png`. Cần upload asset cho Stitch/AI Studio; đường dẫn local không phải URL công khai.
+
+## F Năm quyết định trước khi tạo Stitch
+
+| Cần chốt | Đề xuất mặc định |
+|---|---|
+| Học viên vào phòng thế nào? | Mã/link + tên; anonymous identity |
+| Highlight riêng hay kết hợp? | Câu/đoạn kết hợp highlight |
+| 3 giây nghĩa là gì? | Tách thời gian giữ chữ và thời gian xóa |
+| Bao nhiêu học viên/phòng? | Thử MVP với 30; chưa đo năng lực thực tế |
+| Ngôn ngữ và import ban đầu? | UI tiếng Việt, bài tiếng Anh; text/TXT/URL |
+
+**Trạng thái:** chưa tạo Stitch, chưa provision Firebase, chưa build/deploy ứng dụng.
+
+**Cơ sở:** yêu cầu của bạn và tài liệu Google về [AI Studio Build](https://ai.google.dev/gemini-api/docs/aistudio-build-mode), [full-stack](https://ai.google.dev/gemini-api/docs/aistudio-fullstack).
+
+Bản kỹ thuật đầy đủ được giữ trong `docs/architecture-proposal.md`. Các quyết định ở đây vẫn là đề xuất.
+</textarea>
+<script>
+(() => {
+  const root = document.documentElement;
+  const cycle = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];
+  // The button's data-labels lists every value in cycle order, so the runtime names no theme or mode.
+  const bind = (name, attr) => {
+    const btn = document.querySelector(`[data-am="${name}"]`);
+    if (!btn) return;
+    const labels = JSON.parse(btn.dataset.labels || '{}');
+    const show = (value) => { btn.textContent = labels[value] || value; };
+    show(root.getAttribute(attr));
+    btn.addEventListener('click', () => {
+      const next = cycle(Object.keys(labels), root.getAttribute(attr));
+      root.setAttribute(attr, next);
+      show(next);
+    });
+  };
+  bind('theme', 'data-theme');
+  bind('mode', 'data-mode');
+
+  const copyBtn = document.querySelector('[data-am="copy"]');
+  copyBtn?.addEventListener('click', async () => {
+    const nodes = document.querySelectorAll('#am-source');
+    const text = nodes[nodes.length - 1]?.value ?? '';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = Object.assign(document.createElement('textarea'), { value: text });
+      document.body.append(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    const original = copyBtn.textContent;
+    copyBtn.textContent = copyBtn.dataset.done;
+    setTimeout(() => { copyBtn.textContent = original; }, 1400);
+  });
+})();
+(() => {
+// Pure planner for justified ("photo wall") rows on sheet pages. No DOM access.
+//
+// This file must stay inlinable into the page script: top-level declarations only, no imports, and the exports are
+// `planLayout` and the constants the DOM adapter shares (STEP, MAX_SCALE, MIN_SCALE). The page build strips the `export ` keyword,
+// and test/layout-plan.test.js checks that this still works.
+//
+// planLayout({ width, gap, cols, panels }) -> { rows: [{ columns: [{ panels: [index, ...], width }], height }] }
+//
+// Input (all lengths in px):
+//   width   container width
+//   gap     space between columns, and between two panels stacked in one column
+//   cols    most columns in one row (the planner never uses more than MAX_COLUMNS, but spans stay shares of `cols`)
+//   panels  one entry per panel, in reading order:
+//     samples   [{ w, h }] panel height at sampled widths, ascending by w (heights between samples are interpolated)
+//     minWidth  narrowest feasible width (clamped to `width`)
+//     maxWidth  widest useful width; beyond it the panel only gains empty space (default: no limit)
+//     natural   natural diagram width for a diagram-only panel (default: none)
+//     pad       panel width not used by the diagram (padding and border; default 0)
+//     span      the author's width hint in grid columns (default 1); span >= cols keeps the panel alone in its row
+//
+// Output: { rows, maxScale }. Rows are in reading order; a row is a list of columns (at most `cols`); a column holds one panel or two
+// consecutive panels, stacked. For integer inputs the column widths plus the gaps between them equal `width`.
+// Rows are chosen by dynamic programming over break points; widths by a search in STEP px steps. Cost per row:
+//   H = tallest column; waste = sum((H - columnHeight) * columnWidth) + sum over diagrams wider than maxWidth of (w - maxWidth) * h
+//   dev = sum(((w - preferred) / oneColumn)^2) + SCALE_WEIGHT * sum over diagrams of (ln(scale) / ln(MAX_SCALE))^2
+//   cost = waste / 1000 + PREF_WEIGHT * dev * H
+// Scale band: diagrams on one page stay at similar sizes. With the result's `maxScale` as the diagram size limit, a diagram is
+// shown at scale min(maxScale, (width - pad) / natural). The planner tries a few bands [lo, lo * BAND_RATIO] (lo in BAND_LOS) and
+// keeps the cheapest plan in which no diagram is narrower than scale lo and none is shown above the band's top, so the largest and
+// smallest diagram scale on the page differ by at most BAND_RATIO. A panel wider than its diagram's top size keeps the diagram at
+// that size, and the page script must set the diagram's max-width to natural * maxScale. The band starts no higher than the
+// largest scale the page allows the least roomy diagram, so one wide diagram lowers the band for the others.
+// If no band is feasible the plan is made without a band (maxScale = MAX_SCALE); if no plan fits (or the input is unusable) the
+// result is a single column: one panel per row at the full width.
+
+const STEP = 10;
+const MAX_SCALE = 1.25;
+const MIN_SCALE = 0.75; // the narrowest a diagram is shown, as a share of its natural width
+const MAX_COLUMNS = 6; // rows with more columns are unreadable, and the search grows steeply with the column count
+const BAND_RATIO = 1.25; // the largest and smallest diagram scale on a page differ by at most this
+const BAND_LOS = [MIN_SCALE, 0.85, 0.95, 1]; // lower ends tried for the band; lo * BAND_RATIO is the upper end (1.25 means no upper limit)
+const SCALE_WEIGHT = 3;
+const PREF_WEIGHT = 0.15;
+
+function heightAt(samples, w) {
+  const i = samples.findIndex((s) => s.w >= w);
+  if (i === -1) return samples[samples.length - 1].h;
+  if (i === 0) return samples[0].h;
+  const a = samples[i - 1];
+  const b = samples[i];
+  return a.h + ((b.h - a.h) * (w - a.w)) / (b.w - a.w);
+}
+
+// Every way to split `len` consecutive panels into columns of 1 or 2 panels, as lists of column sizes.
+function splits(len) {
+  if (len === 0) return [[]];
+  return [1, 2].filter((k) => k <= len).flatMap((k) => splits(len - k).map((rest) => [k, ...rest]));
+}
+
+function singleColumn(width, panels) {
+  return { rows: panels.map((_, i) => ({ columns: [{ panels: [i], width }], height: 0 })) };
+}
+
+function planLayout({ width, gap = 0, cols = 3, panels }) {
+  const usable = Number.isFinite(width) && width > 0 && panels.every((p) => Array.isArray(p.samples) && p.samples.length > 0);
+  if (!usable) return singleColumn(width, panels);
+
+  // `cols` stays the unit of the author's spans; no row gets more than MAX_COLUMNS columns however large `cols` is.
+  const maxColumns = Math.min(cols, MAX_COLUMNS);
+  const oneColumn = Math.max(1, (width - gap * (cols - 1)) / cols);
+  // Per-panel limits. With a band [lo, lo * BAND_RATIO], a diagram is no narrower than scale lo and shown at most at the top of the
+  // band: a wider panel keeps it at that size and gains empty space, which the cost counts as waste.
+  const prepare = (lo) => panels.map((p) => {
+    const pad = p.pad ?? 0;
+    const diagram = lo > 0 && p.natural > 0;
+    const scaleCap = diagram ? Math.min(MAX_SCALE, lo * BAND_RATIO) : MAX_SCALE;
+    return {
+      ...p,
+      minWidth: Math.min(width, Math.max(Math.ceil(p.minWidth || 0), diagram ? Math.ceil(p.natural * lo + pad) : 0)),
+      maxWidth: Math.min(p.maxWidth ?? Infinity, diagram ? p.natural * scaleCap + pad : Infinity),
+      scaleCap,
+      pad,
+      preferred: Math.min(width, (p.span ?? 1) * oneColumn + ((p.span ?? 1) - 1) * gap),
+      alone: (p.span ?? 1) >= cols,
+    };
+  });
+  let info = prepare(0);
+  // Beyond its maxWidth a panel only gains empty space, so its height stops changing there (matters when a band lowers maxWidth).
+  const heightOf = (p, w) => heightAt(p.samples, Math.min(w, p.maxWidth));
+  const columnHeight = (col, w) => col.reduce((h, k) => h + heightOf(info[k], w), 0) + gap * (col.length - 1);
+
+  function bestColumns(columns) {
+    const avail = width - gap * (columns.length - 1);
+    const mins = columns.map((c) => Math.max(...c.map((k) => info[k].minWidth)));
+    const minsFrom = mins.map((_, n) => mins.slice(n).reduce((s, w) => s + w, 0));
+    if (minsFrom[0] > avail) return null;
+    let best = null;
+    const evaluate = (ws) => {
+      const hs = ws.map((w, n) => columnHeight(columns[n], w));
+      const H = Math.max(...hs);
+      let waste = 0;
+      let dev = 0;
+      ws.forEach((w, n) => {
+        waste += (H - hs[n]) * w;
+        for (const k of columns[n]) {
+          const p = info[k];
+          if (w > p.maxWidth) waste += (w - p.maxWidth) * heightOf(p, w);
+          dev += ((w - p.preferred) / oneColumn) ** 2;
+          if (p.natural > 0) {
+            const scale = Math.min(p.scaleCap, Math.max(w - p.pad, 1) / p.natural);
+            dev += SCALE_WEIGHT * (Math.log(scale) / Math.log(MAX_SCALE)) ** 2;
+          }
+        }
+      });
+      const cost = waste / 1000 + PREF_WEIGHT * dev * H;
+      if (!best || cost < best.cost) best = { cost, ws, height: H, columns };
+    };
+    const choose = (n, used, ws) => {
+      if (n === columns.length - 1) {
+        const w = avail - used;
+        if (w >= mins[n]) evaluate([...ws, w]);
+        return;
+      }
+      for (let w = mins[n]; used + w + minsFrom[n + 1] <= avail; w += STEP) choose(n + 1, used + w, [...ws, w]);
+    };
+    choose(0, 0, []);
+    return best;
+  }
+
+  // Best columns for one row of panels i..j.
+  function bestRow(i, j) {
+    if (j > i && info.slice(i, j + 1).some((p) => p.alone)) return null;
+    let best = null;
+    for (const split of splits(j - i + 1)) {
+      if (split.length > maxColumns) continue;
+      let next = i;
+      const columns = split.map((size) => Array.from({ length: size }, () => next++));
+      const r = bestColumns(columns);
+      if (r && (!best || r.cost < best.cost)) best = r;
+    }
+    return best;
+  }
+
+  // Row breaks in reading order, for the band set up in `info`. A row holds at most 2 * maxColumns panels. Null if nothing fits.
+  function solve() {
+    const n = panels.length;
+    const total = Array(n + 1).fill(Infinity);
+    const from = Array(n + 1).fill(-1);
+    const chosen = Array(n + 1).fill(null);
+    total[0] = 0;
+    for (let j = 1; j <= n; j++) {
+      for (let i = Math.max(0, j - 2 * maxColumns); i < j; i++) {
+        if (total[i] === Infinity) continue;
+        const r = bestRow(i, j - 1);
+        if (r && total[i] + r.cost < total[j]) {
+          total[j] = total[i] + r.cost;
+          from[j] = i;
+          chosen[j] = r;
+        }
+      }
+    }
+    if (total[n] === Infinity) return null;
+    const rows = [];
+    for (let j = n; j > 0; j = from[j]) {
+      const r = chosen[j];
+      rows.unshift({ columns: r.columns.map((panelsInColumn, c) => ({ panels: panelsInColumn, width: r.ws[c] })), height: r.height });
+    }
+    return { rows, cost: total[n] };
+  }
+
+  let best = null;
+  const diagrams = panels.filter((p) => p.natural > 0);
+  if (diagrams.length > 1) {
+    // No diagram can be shown larger than the page allows, so the band cannot start above the smallest of those limits.
+    const reach = Math.min(...diagrams.map((p) => Math.min(MAX_SCALE, Math.max(width - (p.pad ?? 0), 1) / p.natural)));
+    for (const lo of new Set([...BAND_LOS.filter((x) => x < reach), reach])) {
+      info = prepare(lo);
+      const r = solve();
+      if (r && (!best || r.cost < best.cost)) best = { ...r, maxScale: Math.min(MAX_SCALE, lo * BAND_RATIO) };
+    }
+    info = prepare(0);
+  }
+  best ??= solve();
+  return best ? { rows: best.rows, maxScale: best.maxScale ?? MAX_SCALE } : singleColumn(width, panels);
+}
+
+// DOM adapter for the sheet's justified ("photo wall") layout. Not a module: compose.js puts it after src/runtime/layout-plan.js
+// (which defines planLayout and the shared STEP, MAX_SCALE, MIN_SCALE) inside one function scope of the page script.
+//
+// It measures every panel at sampled widths, asks planLayout for rows and column widths, and applies them with flexbox.
+// The rendered HTML keeps the plain CSS grid: with JavaScript off, at the single-column breakpoint, or while printing, the grid is what
+// shows (the planned widths belong to the screen width, so print never gets a mix of the two); after printing the layout comes back.
+
+const grid = document.querySelector('.am-grid');
+const panels = grid ? [...grid.children].filter((el) => el.classList.contains('am-panel')) : [];
+
+if (panels.length > 1) {
+  const SINGLE_COLUMN = '(max-width: 760px)'; // the single-column breakpoint in src/themes/base.css
+  const TWO_COLUMNS = '(max-width: 1100px)'; // below this the CSS grid has two columns
+  const SAMPLE_STEP = 20; // width sampling step, px; the planner interpolates between samples
+  const TEXT_MIN = 260; // text keeps at least about 16 CJK characters per line
+  const TABLE_COL_MIN = 96; // per table column, px
+  const DIAGRAM_MIN = 160;
+  const RESIZE_DELAY = 150;
+  const OVERFLOWING = '.am-table-wrap, .am-diagram, .am-annot-scroll, pre';
+
+  const original = new Map([grid, ...panels, ...grid.querySelectorAll('.am-diagram > svg')].map((el) => [el, el.getAttribute('style')]));
+  const restoreStyle = (el) => (original.get(el) === null ? el.removeAttribute('style') : el.setAttribute('style', original.get(el)));
+
+  // Back to the plain grid markup and styles.
+  const restore = () => {
+    for (const box of grid.querySelectorAll(':scope > .am-col')) box.replaceWith(...box.children);
+    for (const el of original.keys()) restoreStyle(el);
+  };
+
+  // The author's width hint, rendered as data-span only when the author wrote one. The inline grid-column is the no-JavaScript fallback
+  // and may hold spans the server added, so it is never read here.
+  const spanHint = (el) => Number(el.dataset.span) || 1;
+  const diagramOnly = (el) => {
+    const body = el.querySelector(':scope > .am-panel-body');
+    return body && body.children.length === 1 ? body.querySelector(':scope > .am-diagram > svg') : null;
+  };
+  const naturalWidth = (svg) => Number(svg.getAttribute('width')) || 0;
+
+  // Height (and, for panels with tables or code, the narrowest width without sideways scrolling) at sampled widths.
+  // Only one panel is displayed while it is measured, so each width change lays out that panel alone.
+  function measure(width) {
+    grid.style.display = 'block';
+    for (const el of panels) {
+      el.style.display = 'none';
+      el.style.boxSizing = 'border-box';
+      for (const svg of el.querySelectorAll('.am-diagram > svg')) {
+        svg.style.width = '100%';
+        svg.style.maxWidth = `${naturalWidth(svg) * MAX_SCALE}px`;
+      }
+    }
+    const info = panels.map((el) => {
+      const svg = diagramOnly(el);
+      const svgs = [...el.querySelectorAll('.am-diagram > svg')];
+      const scrollers = el.querySelectorAll(OVERFLOWING);
+      const tableCols = Math.max(0, ...[...el.querySelectorAll('table tr:first-child')].map((tr) => tr.children.length));
+      el.style.display = '';
+      el.style.width = `${width}px`;
+      const pad = svg ? el.offsetWidth - svg.parentElement.clientWidth : 0;
+      const natural = svg ? naturalWidth(svg) : 0;
+      const shrunk = Math.max(0, ...svgs.map((s) => naturalWidth(s) * MIN_SCALE)) + (svg ? pad : 34);
+      const floor = svg ? Math.max(DIAGRAM_MIN, natural * MIN_SCALE + pad) : Math.max(TEXT_MIN, shrunk, tableCols * TABLE_COL_MIN + 34);
+      const from = Math.min(width, Math.floor(floor / STEP) * STEP);
+      const samples = [];
+      let fits = null;
+      for (let w = from; ; w += SAMPLE_STEP) {
+        w = Math.min(w, width);
+        el.style.width = `${w}px`;
+        if (fits === null && !svg && scrollers.length && ![...scrollers].some((s) => s.scrollWidth > s.clientWidth + 1)) fits = w;
+        samples.push({ w, h: el.offsetHeight });
+        if (w === width) break;
+      }
+      el.style.display = 'none';
+      return {
+        samples,
+        minWidth: svg ? floor : Math.max(floor, fits ?? (scrollers.length ? width : 0)),
+        maxWidth: svg ? natural * MAX_SCALE + pad : Infinity,
+        natural,
+        pad,
+        span: spanHint(el),
+      };
+    });
+    for (const el of panels) {
+      el.style.display = '';
+      el.style.width = '';
+    }
+    return info;
+  }
+
+  // Each column gets a fixed width. A row adds up to the full width, so flex-wrap breaks rows by itself.
+  // Stacked panels go into a column wrapper whose last panel absorbs the extra height.
+  function apply(plan, gap) {
+    grid.style.display = 'flex';
+    grid.style.flexWrap = 'wrap';
+    grid.style.alignItems = 'stretch';
+    grid.style.gap = `${gap}px`;
+    for (const el of panels) {
+      el.style.gridColumn = '';
+      el.style.gridRow = '';
+      el.style.flex = '0 0 auto';
+    }
+    for (const row of plan.rows) {
+      for (const col of row.columns) {
+        const width = `${col.width}px`;
+        if (col.panels.length === 1) {
+          panels[col.panels[0]].style.width = width;
+          continue;
+        }
+        const box = document.createElement('div');
+        box.className = 'am-col';
+        box.style.cssText = `width:${width};flex:0 0 auto;display:flex;flex-direction:column;gap:${gap}px`;
+        panels[col.panels[0]].before(box);
+        for (const k of col.panels) {
+          panels[k].style.width = '';
+          box.append(panels[k]);
+        }
+        panels[col.panels[col.panels.length - 1]].style.flex = '1 1 auto';
+      }
+    }
+  }
+
+  // Diagram-only panels show their diagram at most at the top of the page's scale band; a wider panel gains empty space instead.
+  function capDiagrams(maxScale) {
+    for (const el of panels) {
+      const svg = diagramOnly(el);
+      if (svg) svg.style.maxWidth = `${naturalWidth(svg) * maxScale}px`;
+    }
+  }
+
+  const containerWidth = () => Math.floor(grid.getBoundingClientRect().width);
+
+  function justify() {
+    if (printing || printQuery.matches) return;
+    try {
+      // A vertical scrollbar can appear or vanish once the rows change height; plan again if the width moved.
+      let planned = -1;
+      for (let pass = 0; pass < 3 && planned !== containerWidth(); pass++) {
+        restore();
+        if (matchMedia(SINGLE_COLUMN).matches) return;
+        planned = containerWidth();
+        const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
+        const cols = Math.max(1, Number(getComputedStyle(grid).getPropertyValue('--cols')) || 3);
+        const plan = planLayout({ width: planned, gap, cols: matchMedia(TWO_COLUMNS).matches ? Math.min(cols, 2) : cols, panels: measure(planned) });
+        apply(plan, gap);
+        capDiagrams(plan.maxScale);
+      }
+      // The width never settled: columns planned for another width would overflow or leave gaps, so show the plain grid.
+      if (planned !== containerWidth()) restore();
+    } catch {
+      restore();
+    }
+  }
+
+  // Printing: back to the plain grid (spans and all), and the layout again afterwards. Browsers disagree on which of the
+  // `beforeprint` event and the print media query change fires first, or at all, so listen to both; both are idempotent.
+  // While `printing` is set (beforeprint to afterprint) justify() does nothing, so a late resize cannot bring flex widths into the print layout.
+  let printing = false;
+  const printQuery = matchMedia('print');
+  let timer = 0;
+  const later = () => {
+    clearTimeout(timer);
+    timer = setTimeout(justify, RESIZE_DELAY);
+  };
+  const toPrint = () => {
+    clearTimeout(timer);
+    restore();
+  };
+  justify();
+  addEventListener('resize', later);
+  addEventListener('beforeprint', () => {
+    printing = true;
+    toPrint();
+  });
+  addEventListener('afterprint', () => {
+    printing = false;
+    later();
+  });
+  printQuery.addEventListener('change', (e) => (e.matches ? toPrint() : later()));
+  // Late changes to panel heights: web fonts arriving, and images inside the grid finishing their load (load does not bubble, so capture it).
+  document.fonts?.ready.then(later);
+  grid.addEventListener('load', later, true);
+  // Switching theme changes paddings and fonts, hence panel heights.
+  document.querySelector('[data-am="theme"]')?.addEventListener('click', later);
+}
+})();
+</script>
+</body>
+</html>
