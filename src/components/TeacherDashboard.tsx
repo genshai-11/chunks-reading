@@ -64,6 +64,9 @@ import {
   Share2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Zap,
   UserX,
   Layers,
   Sliders,
@@ -74,6 +77,13 @@ import {
   ExternalLink,
   Monitor
 } from 'lucide-react';
+
+const ERASE_EFFECT_NAMES: Record<EraseEffect, string> = {
+  vaporize: 'Tan biến',
+  dissolve: 'Hòa tan',
+  fade: 'Mờ dần',
+  wipe: 'Gạt cuộn',
+};
 
 interface TeacherDashboardProps {
   user: User;
@@ -120,6 +130,43 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [stagedWindowMs, setStagedWindowMs] = useState(3000);
   const [stagedEraseEffect, setStagedEraseEffect] = useState<EraseEffect>('vaporize');
   const [isApplying, setIsApplying] = useState(false);
+
+  // Slide Remote HUD, Auto-Advance & Collapsible panels state
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [showTimingSettings, setShowTimingSettings] = useState(false);
+  const [showEraseEffectPicker, setShowEraseEffectPicker] = useState(false);
+  const [showTimelinePreview, setShowTimelinePreview] = useState(false);
+
+  // Synchronized refs for slide presenter clickers & keyboard hotkeys
+  const activeRoomRef = React.useRef(activeRoom);
+  activeRoomRef.current = activeRoom;
+  const activePresentedResourceRef = React.useRef(activePresentedResource);
+  activePresentedResourceRef.current = activePresentedResource;
+  const stagedUnitIndexRef = React.useRef(stagedUnitIndex);
+  stagedUnitIndexRef.current = stagedUnitIndex;
+  const currentUnitsListRef = React.useRef<string[]>([]);
+  const stagedSettingsRef = React.useRef({
+    stagedGranularity,
+    stagedHighlight,
+    stagedPolicy,
+    stagedHoldMs,
+    stagedEraseMs,
+    stagedWindowMs,
+    stagedEraseEffect,
+  });
+  stagedSettingsRef.current = {
+    stagedGranularity,
+    stagedHighlight,
+    stagedPolicy,
+    stagedHoldMs,
+    stagedEraseMs,
+    stagedWindowMs,
+    stagedEraseEffect,
+  };
+
+  const lastBackPressTimeRef = React.useRef<number>(0);
+  const autoAdvanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoAdvanceTriggeredUnitRef = React.useRef<number | null>(null);
 
   // Active Room Live Progress calculation
   const [roomProgress, setRoomProgress] = useState({
@@ -228,7 +275,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [activeRoom]);
 
-  // Start new classroom room (supports any resource, auto-publishing if draft)
+  // Start new classroom room or re-use existing active room (Room Reuse)
   const handleOpenClassroom = async (res: ReadingResource) => {
     setDashboardNotice(null);
     try {
@@ -236,6 +283,31 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       if (res.status !== 'published') {
         await publishResource(res.id);
         res.status = 'published';
+      }
+
+      // 1. ROOM REUSE: Re-use active room if active, avoid creating duplicate room documents
+      if (activeRoom && activeRoom.status === 'active') {
+        await applyToRoomCommand(
+          activeRoom.id,
+          activeRoom.revision,
+          res,
+          0,
+          stagedGranularity,
+          stagedHighlight,
+          stagedPolicy,
+          stagedHoldMs,
+          stagedEraseMs,
+          stagedWindowMs,
+          stagedEraseEffect
+        );
+        setActivePresentedResource(res);
+        setStagedUnitIndex(0);
+        setShowLibraryDrawer(false);
+        setDashboardNotice({
+          type: 'success',
+          text: `Đã nạp bài đọc '${res.title}' vào phòng học hiện tại [${activeRoom.id}]. Học sinh tiếp tục học mà không cần vào lại link!`,
+        });
+        return;
       }
 
       const newRoom = await createClassroomRoom(
@@ -258,7 +330,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         text: `Phòng học ${newRoom.id} đã mở! Học sinh có thể truy cập bằng link hoặc mã ${newRoom.id}.`,
       });
     } catch (err: any) {
-      console.error('Could not create classroom:', err);
+      console.error('Could not create or reuse classroom:', err);
       setDashboardNotice({ type: 'error', text: `Không thể mở phòng học: ${err.message}` });
     }
   };
@@ -416,6 +488,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       ? activePresentedResource.sentences
       : activePresentedResource.paragraphs
     : [];
+  currentUnitsListRef.current = currentUnitsList;
   const stagedText = currentUnitsList[stagedUnitIndex] || '';
 
   const stagedApprovedSpans = activePresentedResource
@@ -432,6 +505,219 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     : [];
 
   const stagedSlices = buildRenderSlices(stagedText, stagedHighlight ? stagedApprovedSpans : []);
+
+  // Slide Remote Clicker & Hotkey Handlers
+  const handleAdvanceAndPlay = async () => {
+    const currentRoom = activeRoomRef.current;
+    const resource = activePresentedResourceRef.current;
+    const units = currentUnitsListRef.current;
+    const currentIndex = stagedUnitIndexRef.current;
+    const settings = stagedSettingsRef.current;
+
+    if (!currentRoom || !resource) return;
+    if (currentIndex >= units.length - 1) {
+      setDashboardNotice({ type: 'info', text: 'Đã đến câu / đoạn cuối cùng của bài đọc!' });
+      return;
+    }
+    const nextIdx = currentIndex + 1;
+    setStagedUnitIndex(nextIdx);
+
+    try {
+      await applyToRoomCommand(
+        currentRoom.id,
+        currentRoom.revision,
+        resource,
+        nextIdx,
+        settings.stagedGranularity,
+        settings.stagedHighlight,
+        settings.stagedPolicy,
+        settings.stagedHoldMs,
+        settings.stagedEraseMs,
+        settings.stagedWindowMs,
+        settings.stagedEraseEffect
+      );
+      const latestRevision = activeRoomRef.current?.revision ?? currentRoom.revision;
+      await playTurnCommand(currentRoom.id, Math.max(latestRevision, currentRoom.revision + 1));
+    } catch (err: any) {
+      console.error('Error advancing to next unit:', err);
+      setDashboardNotice({ type: 'error', text: `Lỗi chuyển câu tiếp: ${err.message}` });
+    }
+  };
+
+  const handlePreviousAndPlay = async () => {
+    const currentRoom = activeRoomRef.current;
+    const resource = activePresentedResourceRef.current;
+    const currentIndex = stagedUnitIndexRef.current;
+    const settings = stagedSettingsRef.current;
+
+    if (!currentRoom || !resource) return;
+    if (currentIndex <= 0) {
+      setDashboardNotice({ type: 'info', text: 'Đang ở câu / đoạn đầu tiên!' });
+      return;
+    }
+    const prevIdx = currentIndex - 1;
+    setStagedUnitIndex(prevIdx);
+
+    try {
+      await applyToRoomCommand(
+        currentRoom.id,
+        currentRoom.revision,
+        resource,
+        prevIdx,
+        settings.stagedGranularity,
+        settings.stagedHighlight,
+        settings.stagedPolicy,
+        settings.stagedHoldMs,
+        settings.stagedEraseMs,
+        settings.stagedWindowMs,
+        settings.stagedEraseEffect
+      );
+      const latestRevision = activeRoomRef.current?.revision ?? currentRoom.revision;
+      await playTurnCommand(currentRoom.id, Math.max(latestRevision, currentRoom.revision + 1));
+    } catch (err: any) {
+      console.error('Error going to previous unit:', err);
+      setDashboardNotice({ type: 'error', text: `Lỗi lùi về câu trước: ${err.message}` });
+    }
+  };
+
+  const handleReplayCurrent = async () => {
+    const currentRoom = activeRoomRef.current;
+    if (!currentRoom) return;
+    try {
+      await playTurnCommand(currentRoom.id, currentRoom.revision);
+    } catch (err: any) {
+      console.error('Error replaying current unit:', err);
+      setDashboardNotice({ type: 'error', text: `Lỗi phát lại: ${err.message}` });
+    }
+  };
+
+  const handleTogglePlayPause = async () => {
+    const currentRoom = activeRoomRef.current;
+    if (!currentRoom) return;
+    if (currentRoom.playbackStatus === 'playing') {
+      await handlePauseTurn();
+    } else if (currentRoom.playbackStatus === 'paused') {
+      await handleResumeTurn();
+    } else {
+      await handlePlayTurn();
+    }
+  };
+
+  const handleToggleBlankOrShow = async () => {
+    const currentRoom = activeRoomRef.current;
+    if (!currentRoom) return;
+    if (currentRoom.playbackStatus === 'idle') {
+      await handleShowTurn();
+    } else {
+      await handleHideTurn();
+    }
+  };
+
+  const handleBackKey = () => {
+    const now = Date.now();
+    if (now - lastBackPressTimeRef.current <= 1500 && stagedUnitIndexRef.current > 0) {
+      lastBackPressTimeRef.current = 0;
+      handlePreviousAndPlay();
+    } else {
+      lastBackPressTimeRef.current = now;
+      handleReplayCurrent();
+    }
+  };
+
+  // Presentation Remote & Hotkeys Listener (PageDown/Up, ArrowLeft/Right, Space, B/.)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Guard: ignore keydown when active element is input, textarea, or contentEditable
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // Guard: ignore if modal or drawer is open
+      if (isEditorOpen || reviewingResource || showStudioModal || showLibraryDrawer) {
+        return;
+      }
+
+      if (!activeRoomRef.current || !activePresentedResourceRef.current) {
+        return;
+      }
+
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        e.preventDefault();
+        handleAdvanceAndPlay();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        handleBackKey();
+      } else if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        handleTogglePlayPause();
+      } else if (e.key === 'b' || e.key === 'B' || e.key === '.') {
+        e.preventDefault();
+        handleToggleBlankOrShow();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditorOpen, reviewingResource, showStudioModal, showLibraryDrawer]);
+
+  // Auto-Advance Controller: when phase === 'blank_finished', after 1.5s comfortable pause, advance and play
+  useEffect(() => {
+    if (!autoAdvance) {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (!activeRoom || activeRoom.playbackStatus !== 'playing') {
+      return;
+    }
+
+    if (roomProgress.phase === 'blank_finished') {
+      if (autoAdvanceTriggeredUnitRef.current === stagedUnitIndex) {
+        return;
+      }
+      autoAdvanceTriggeredUnitRef.current = stagedUnitIndex;
+      autoAdvanceTimerRef.current = setTimeout(() => {
+        if (stagedUnitIndex < currentUnitsList.length - 1) {
+          handleAdvanceAndPlay();
+        } else {
+          setAutoAdvance(false);
+          setDashboardNotice({
+            type: 'success',
+            text: 'Đã hoàn thành tự động chuyển câu toàn bộ bài đọc!',
+          });
+        }
+      }, 1500);
+    } else {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+    };
+  }, [
+    autoAdvance,
+    roomProgress.phase,
+    activeRoom?.playbackStatus,
+    stagedUnitIndex,
+    currentUnitsList.length,
+  ]);
 
   // Render Library Content (reusable for main view or slide-over drawer)
   const renderLibraryContent = (isDrawerMode: boolean) => (
@@ -813,10 +1099,58 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
             {/* Private Unit Stepper */}
             <div className="neo-box-sm p-3.5 bg-[#FFFDF0] space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600">
-                  Điều hướng câu / đoạn ({stagedUnitIndex + 1} / {currentUnitsList.length})
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/10 pb-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-mono font-black uppercase tracking-wider text-black">
+                    Điều hướng câu / đoạn ({stagedUnitIndex + 1} / {currentUnitsList.length})
+                  </span>
+
+                  {/* Compact Room Summary Bar */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Sĩ số online badge with live pulse */}
+                    <span className="neo-badge bg-[#4ADE80] text-black text-[10px] py-0.5 px-1.5 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-700 animate-pulse inline-block"></span>
+                      👥 {participants.length} học sinh online
+                    </span>
+
+                    {/* Mã phòng badge */}
+                    <span className="neo-badge bg-white text-black text-[10px] py-0.5 px-1.5 font-mono font-bold">
+                      🏷️ {activeRoom.id}
+                    </span>
+
+                    {/* Trạng thái phát badge */}
+                    {(() => {
+                      const status = activeRoom.playbackStatus;
+                      if (status === 'playing') {
+                        return (
+                          <span className="neo-badge bg-[#4ADE80] text-black text-[10px] py-0.5 px-1.5 font-bold animate-pulse">
+                            ● ĐANG PHÁT
+                          </span>
+                        );
+                      }
+                      if (status === 'paused') {
+                        return (
+                          <span className="neo-badge bg-[#FFE500] text-black text-[10px] py-0.5 px-1.5 font-bold">
+                            ❚❚ TẠM DỪNG
+                          </span>
+                        );
+                      }
+                      if (status === 'manual_show') {
+                        return (
+                          <span className="neo-badge bg-[#00D2FF] text-black text-[10px] py-0.5 px-1.5 font-bold">
+                            💬 THẢO LUẬN
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="neo-badge bg-neutral-200 text-neutral-700 text-[10px] py-0.5 px-1.5 font-bold">
+                          ○ CHỜ PHÁT
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
@@ -922,18 +1256,152 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </button>
             </div>
 
-            {/* Authoritative Playback Controls */}
-            <div className="neo-box-sm p-3.5 bg-white space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600">
-                  Điều khiển phát (Broadcast)
-                </span>
-                <span className="neo-badge bg-[#FFE500] text-black text-[10px]">
-                  TRẠNG THÁI: {activeRoom.playbackStatus.toUpperCase()}
-                </span>
+            {/* Authoritative Playback Controls & Slide Remote HUD */}
+            <div className="neo-box-sm p-3.5 bg-white space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/10 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-black uppercase tracking-wider text-black flex items-center gap-1.5">
+                    <Radio size={14} className="text-[#FF3838]" /> Điều khiển phát & Trình chiếu (Slide Remote)
+                  </span>
+                  <span className="neo-badge bg-[#FFE500] text-black text-[10px]">
+                    TRẠNG THÁI: {activeRoom.playbackStatus.toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Auto-Advance toggle switch */}
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-mono font-bold select-none">
+                    <input
+                      type="checkbox"
+                      checked={autoAdvance}
+                      onChange={e => setAutoAdvance(e.target.checked)}
+                      className="w-4 h-4 accent-black cursor-pointer"
+                    />
+                    <span>⚡ Tự động chuyển câu</span>
+                  </label>
+                  {autoAdvance ? (
+                    <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold animate-pulse">
+                      BẬT (1.5s)
+                    </span>
+                  ) : (
+                    <span className="neo-badge bg-neutral-200 text-neutral-600 text-[9px] py-0 px-1 font-bold">
+                      TẮT
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {/* Slide Remote HUD / Control Pad */}
+              <div className="neo-box-sm bg-[#FFFDF0] p-3 border-2 border-black space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between text-[11px] font-mono font-bold text-neutral-700">
+                  <span className="flex items-center gap-1">
+                    🎮 Bàn phím & USB Clicker Remote Pad
+                  </span>
+                  <span className="text-[10px] text-neutral-500">
+                    Hỗ trợ Logitech, Baseus, USB Remote & Keyboard Hotkeys
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* Button 1: Double-tap back / previous sentence */}
+                  <button
+                    type="button"
+                    onClick={handlePreviousAndPlay}
+                    disabled={stagedUnitIndex <= 0}
+                    className="neo-btn-sm py-2 px-2 bg-white text-black text-xs font-bold flex flex-col items-center justify-center gap-1 hover:bg-neutral-100 disabled:opacity-40"
+                    title="Lùi về câu trước và phát ngay (Hoặc bấm phím lùi 2 lần liên tiếp)"
+                  >
+                    <span className="font-black text-xs">⏮️ Lùi 2 lần</span>
+                    <span className="text-[10px] text-neutral-600 font-normal">(Câu trước & Phát)</span>
+                    <span className="neo-badge bg-neutral-100 text-neutral-700 text-[9px] py-0 px-1 border border-black/40">
+                      [ ← / PgUp x2 ]
+                    </span>
+                  </button>
+
+                  {/* Button 2: Single-tap back / replay current */}
+                  <button
+                    type="button"
+                    onClick={handleReplayCurrent}
+                    className="neo-btn-sm py-2 px-2 bg-[#FFE500] text-black text-xs font-bold flex flex-col items-center justify-center gap-1 hover:bg-yellow-300"
+                    title="Phát lại câu hiện tại từ đầu (Hoặc bấm phím lùi 1 lần)"
+                  >
+                    <span className="font-black text-xs">🔄 Lùi 1 lần</span>
+                    <span className="text-[10px] text-neutral-800 font-normal">(Phát lại câu này)</span>
+                    <span className="neo-badge bg-white text-black text-[9px] py-0 px-1 border border-black/40">
+                      [ ← / PgUp x1 ]
+                    </span>
+                  </button>
+
+                  {/* Button 3: Toggle play / pause */}
+                  <button
+                    type="button"
+                    onClick={handleTogglePlayPause}
+                    className={`neo-btn-sm py-2 px-2 text-xs font-bold flex flex-col items-center justify-center gap-1 ${
+                      activeRoom.playbackStatus === 'playing'
+                        ? 'bg-[#00D2FF] text-black hover:bg-cyan-300'
+                        : 'bg-[#4ADE80] text-black hover:bg-green-400'
+                    }`}
+                    title="Phát hoặc Tạm dừng (Hoặc bấm phím Space)"
+                  >
+                    <span className="font-black text-xs">
+                      {activeRoom.playbackStatus === 'playing' ? '⏸️ Tạm dừng' : '▶️ Phát (Play)'}
+                    </span>
+                    <span className="text-[10px] font-normal">
+                      {activeRoom.playbackStatus === 'playing' ? '(Đang đếm giờ)' : '(Bắt đầu hiện chữ)'}
+                    </span>
+                    <span className="neo-badge bg-white text-black text-[9px] py-0 px-1 border border-black/40">
+                      [ Space ]
+                    </span>
+                  </button>
+
+                  {/* Button 4: Next sentence */}
+                  <button
+                    type="button"
+                    onClick={handleAdvanceAndPlay}
+                    disabled={stagedUnitIndex >= currentUnitsList.length - 1}
+                    className="neo-btn-sm py-2 px-2 bg-[#FF3838] text-white text-xs font-bold flex flex-col items-center justify-center gap-1 hover:bg-red-600 disabled:opacity-40"
+                    title="Chuyển sang câu tiếp theo và phát ngay (Hoặc bấm phím mũi tên phải)"
+                  >
+                    <span className="font-black text-xs">⏭️ Tiến 1 lần</span>
+                    <span className="text-[10px] text-red-100 font-normal">(Câu tiếp & Phát)</span>
+                    <span className="neo-badge bg-black text-white text-[9px] py-0 px-1 border border-black/40">
+                      [ → / PgDn ]
+                    </span>
+                  </button>
+                </div>
+
+                {/* Hotkey helper bar for Black screen / Discussion */}
+                <div className="flex flex-wrap items-center justify-between pt-1 border-t border-black/15 text-[11px] font-mono gap-1">
+                  <button
+                    type="button"
+                    onClick={handleToggleBlankOrShow}
+                    className="neo-btn-sm px-2 py-0.5 bg-white text-black text-[11px] font-bold flex items-center gap-1 hover:bg-neutral-100"
+                    title="Bật/Tắt màn hình trống hoặc hiện chữ thảo luận (Phím B hoặc phím dấu chấm .)"
+                  >
+                    {activeRoom.playbackStatus === 'idle' ? (
+                      <>
+                        <Eye size={12} />
+                        <span>Hiện chữ thảo luận</span>
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff size={12} />
+                        <span>Màn hình trống (Blank)</span>
+                      </>
+                    )}
+                    <span className="neo-badge bg-neutral-100 text-neutral-800 text-[9px] py-0 px-1 ml-1">
+                      [ B / . ]
+                    </span>
+                  </button>
+
+                  <span className="text-[10px] text-neutral-500 font-mono">
+                    💡 Thầy cô có thể cầm bút trình chiếu đi lại trong lớp và bấm chuyển câu tự do!
+                  </span>
+                </div>
+              </div>
+
+              {/* Standard Direct Broadcast Action Buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                 {/* Play / Replay */}
                 <button
                   type="button"
@@ -984,96 +1452,205 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </div>
             </div>
 
-            {/* Dynamic Timing Configuration & Preview */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-black flex items-center gap-1.5">
-                  <Clock size={14} /> Thời gian hiện và xóa chữ
-                </span>
+            {/* Collapsible Secondary Panels */}
+            <div className="space-y-2">
+              {/* 1. Timing Settings Collapsible */}
+              <div className="border border-black shadow-[1px_1px_0px_#000] bg-white">
+                <button
+                  type="button"
+                  onClick={() => setShowTimingSettings(!showTimingSettings)}
+                  className="w-full py-2 px-3 bg-neutral-100 text-black text-xs font-mono font-bold flex items-center justify-between hover:bg-neutral-200 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Clock size={13} />
+                    <span>⚙️ Cài đặt thời gian (Thu gọn / Mở rộng)</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-[11px] text-neutral-600 font-mono">
+                    <span>
+                      {stagedPolicy === 'hold_then_erase' ? 'Hiện rồi Xóa' : 'Khung giờ'} (Giữ {stagedHoldMs / 1000}s, Xóa {stagedEraseMs / 1000}s)
+                    </span>
+                    {showTimingSettings ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </span>
+                </button>
+
+                {showTimingSettings && (
+                  <div className="p-3.5 bg-[#FFFDF0] border-t border-black space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-mono font-bold uppercase mb-1">
+                          Chế độ thời gian (Timing Policy):
+                        </label>
+                        <select
+                          value={stagedPolicy}
+                          onChange={e => setStagedPolicy(e.target.value as TimingPolicy)}
+                          className="neo-input w-full text-xs"
+                        >
+                          <option value="hold_then_erase">Hiện rồi Xóa (Hold Then Erase)</option>
+                          <option value="erase_within_window">Xóa trong khung giờ cố định (Erase Within Window)</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="text-[11px] font-mono font-bold uppercase">
+                              Giữ chữ:
+                            </label>
+                            <span className="text-[11px] font-mono text-neutral-600 font-bold">
+                              {(stagedHoldMs / 1000).toFixed(1)}s
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            step={500}
+                            min={1000}
+                            max={15000}
+                            value={stagedHoldMs}
+                            onChange={e => setStagedHoldMs(Number(e.target.value))}
+                            className="w-full accent-black cursor-pointer mb-1"
+                          />
+                          <input
+                            type="number"
+                            step={500}
+                            min={1000}
+                            value={stagedHoldMs}
+                            onChange={e => setStagedHoldMs(Number(e.target.value))}
+                            className="neo-input w-full text-xs py-1"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="text-[11px] font-mono font-bold uppercase">
+                              Thời gian xóa:
+                            </label>
+                            <span className="text-[11px] font-mono text-neutral-600 font-bold">
+                              {(stagedEraseMs / 1000).toFixed(1)}s
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            step={250}
+                            min={500}
+                            max={8000}
+                            value={stagedEraseMs}
+                            onChange={e => setStagedEraseMs(Number(e.target.value))}
+                            className="w-full accent-black cursor-pointer mb-1"
+                          />
+                          <input
+                            type="number"
+                            step={250}
+                            min={500}
+                            value={stagedEraseMs}
+                            onChange={e => setStagedEraseMs(Number(e.target.value))}
+                            className="neo-input w-full text-xs py-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {stagedPolicy === 'erase_within_window' && (
+                      <div className="pt-1 border-t border-black/15">
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="text-[11px] font-mono font-bold uppercase">
+                            Khung thời gian tối đa (Window ms):
+                          </label>
+                          <span className="text-[11px] font-mono text-neutral-600 font-bold">
+                            {(stagedWindowMs / 1000).toFixed(1)}s
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          step={500}
+                          min={stagedEraseMs + 500}
+                          max={20000}
+                          value={stagedWindowMs}
+                          onChange={e => setStagedWindowMs(Number(e.target.value))}
+                          className="w-full accent-black cursor-pointer mb-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-[11px] font-mono font-bold uppercase mb-1">
-                    Chế độ thời gian:
-                  </label>
-                  <select
-                    value={stagedPolicy}
-                    onChange={e => setStagedPolicy(e.target.value as TimingPolicy)}
-                    className="neo-input w-full text-xs"
-                  >
-                    <option value="hold_then_erase">Hiện rồi Xóa (Hold Then Erase)</option>
-                    <option value="erase_within_window">Xóa trong khung giờ cố định</option>
-                  </select>
-                </div>
+              {/* 2. Erase Effect Selector Collapsible */}
+              <div className="border border-black shadow-[1px_1px_0px_#000] bg-white">
+                <button
+                  type="button"
+                  onClick={() => setShowEraseEffectPicker(!showEraseEffectPicker)}
+                  className="w-full py-2 px-3 bg-neutral-100 text-black text-xs font-mono font-bold flex items-center justify-between hover:bg-neutral-200 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles size={13} />
+                    <span>
+                      ✨ Hiệu ứng xóa: {ERASE_EFFECT_NAMES[stagedEraseEffect]} {showEraseEffectPicker ? '(Thu gọn ▲)' : '(Đổi hiệu ứng ▼)'}
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-neutral-600 font-mono flex items-center gap-1">
+                    <span>{stagedEraseEffect}</span>
+                    {showEraseEffectPicker ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </span>
+                </button>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-mono font-bold uppercase mb-1">
-                      Giữ chữ (ms):
-                    </label>
-                    <input
-                      type="number"
-                      step={500}
-                      min={1000}
-                      value={stagedHoldMs}
-                      onChange={e => setStagedHoldMs(Number(e.target.value))}
-                      className="neo-input w-full text-xs"
-                    />
+                {showEraseEffectPicker && (
+                  <div className="p-3.5 bg-[#FFFDF0] border-t border-black">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {(
+                        [
+                          { id: 'vaporize', label: '✨ Tan biến', desc: 'Sương khói bốc hơi' },
+                          { id: 'dissolve', label: '🌫️ Hòa tan', desc: 'Hạt li ti phân tán' },
+                          { id: 'fade', label: '💨 Mờ dần', desc: 'Mờ dần đều êm dịu' },
+                          { id: 'wipe', label: '✂️ Gạt cuộn', desc: 'Quét màn hình ngang' },
+                        ] as const
+                      ).map(eff => (
+                        <button
+                          key={eff.id}
+                          type="button"
+                          onClick={() => setStagedEraseEffect(eff.id)}
+                          className={`p-2 border text-left text-xs font-mono transition-all ${
+                            stagedEraseEffect === eff.id
+                              ? 'bg-[#FFE500] border-black text-black font-bold shadow-[2px_2px_0px_#000]'
+                              : 'bg-white border-black/30 text-neutral-700 hover:border-black'
+                          }`}
+                        >
+                          <div className="font-bold">{eff.label}</div>
+                          <div className="text-[10px] text-neutral-500">{eff.desc}</div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-mono font-bold uppercase mb-1">
-                      Thời gian xóa (ms):
-                    </label>
-                    <input
-                      type="number"
-                      step={250}
-                      min={500}
-                      value={stagedEraseMs}
-                      onChange={e => setStagedEraseMs(Number(e.target.value))}
-                      className="neo-input w-full text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono font-bold uppercase mb-1">
-                    Hiệu ứng xóa (Erase Effect):
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                    {(
-                      [
-                        { id: 'vaporize', label: '✨ Tan biến', desc: 'Sương khói bốc hơi' },
-                        { id: 'dissolve', label: '🌫️ Hòa tan', desc: 'Hạt li ti phân tán' },
-                        { id: 'fade', label: '💨 Mờ dần', desc: 'Mờ dần đều êm dịu' },
-                        { id: 'wipe', label: '✂️ Gạt cuộn', desc: 'Quét màn hình ngang' },
-                      ] as const
-                    ).map(eff => (
-                      <button
-                        key={eff.id}
-                        type="button"
-                        onClick={() => setStagedEraseEffect(eff.id)}
-                        className={`p-2 border text-left text-xs font-mono transition-all ${
-                          stagedEraseEffect === eff.id
-                            ? 'bg-[#FFE500] border-black text-black font-bold shadow-[2px_2px_0px_#000]'
-                            : 'bg-white border-black/30 text-neutral-700 hover:border-black'
-                        }`}
-                      >
-                        <div className="font-bold">{eff.label}</div>
-                        <div className="text-[10px] text-neutral-500">{eff.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Dynamic Timing Preview */}
-              <TimingPreview
-                policy={stagedPolicy}
-                holdDurationMs={stagedHoldMs}
-                eraseDurationMs={stagedEraseMs}
-                totalWindowMs={stagedWindowMs}
-              />
+              {/* 3. Timeline Preview Collapsible */}
+              <div className="border border-black shadow-[1px_1px_0px_#000] bg-white">
+                <button
+                  type="button"
+                  onClick={() => setShowTimelinePreview(!showTimelinePreview)}
+                  className="w-full py-2 px-3 bg-neutral-100 text-black text-xs font-mono font-bold flex items-center justify-between hover:bg-neutral-200 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Sliders size={13} />
+                    <span>📊 Xem trước tiến trình Timeline (Thu gọn / Mở rộng)</span>
+                  </span>
+                  <span className="text-[11px] text-neutral-600 font-mono flex items-center gap-1">
+                    <span>{showTimelinePreview ? 'Ẩn preview' : 'Hiện preview'}</span>
+                    {showTimelinePreview ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </span>
+                </button>
+
+                {showTimelinePreview && (
+                  <div className="p-3.5 bg-white border-t border-black">
+                    <TimingPreview
+                      policy={stagedPolicy}
+                      holdDurationMs={stagedHoldMs}
+                      eraseDurationMs={stagedEraseMs}
+                      totalWindowMs={stagedWindowMs}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Connected Learners Roster */}
