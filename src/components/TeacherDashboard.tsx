@@ -9,10 +9,12 @@ import {
   ReadingResource,
   ClassroomRoom,
   Granularity,
-  TimingPolicy,
   RoomParticipant,
   PhraseAnnotation,
   EraseEffect,
+  TimingMode,
+  EraseSchedule,
+  CalculatedTimeline,
 } from '../types';
 import {
   fetchTeacherResources,
@@ -27,6 +29,7 @@ import {
   subscribeToRoom,
   subscribeToParticipants,
   applyToRoomCommand,
+  selectAppliedUnitCommand,
   playTurnCommand,
   pauseTurnCommand,
   resumeTurnCommand,
@@ -36,13 +39,23 @@ import {
   removeParticipant,
   setFullReviewCommand,
 } from '../services/roomService';
-import { calculateRoomTimeline, calculateDynamicHoldDuration } from '../utils/timingEngine';
+import { getSyncedRoomTimeline } from '../services/roomClock';
+import { useRoomClock } from './useRoomClock';
+import { TeacherPrivateUnitPreview } from './TeacherPrivateUnitPreview';
+import { useTeacherTabRoute } from './useTeacherTabRoute';
+import { calculateAutoReadingMs, getWordsPerSecond, validateWordsPerSecond } from '../utils/readingTiming';
+import { getUnitApprovedSpans } from '../utils/unitAnnotations';
+import { ReadingUnitText } from './ReadingUnitText';
+import { ReadingCountdown } from './ReadingCountdown';
+import { useTeacherReadingAudio } from './useTeacherReadingAudio';
+import { TeacherReadingSettings } from './TeacherReadingSettings';
 import { buildRenderSlices, segmentSentences, segmentParagraphs, mergeShortUnits } from '../utils/textSegmentation';
 import { ResourceEditorModal } from './ResourceEditorModal';
 import { PhraseReviewModal } from './PhraseReviewModal';
 import { TimingPreview } from './TimingPreview';
 import { PhraseEditorStudio } from './PhraseEditorStudio';
 import { LiveLearnerView } from './LiveLearnerView';
+import { LiveLearnerPreview } from './LiveLearnerPreview';
 import { DustDirectionControl } from './DustDirectionControl';
 import { ERASE_EFFECT_OPTIONS, DEFAULT_DUST_ANGLE } from '../utils/eraseEffects';
 import {
@@ -79,7 +92,9 @@ import {
   X,
   ExternalLink,
   Monitor,
-  LayoutGrid
+  LayoutGrid,
+  Maximize,
+  Minimize,
 } from 'lucide-react';
 
 const ERASE_EFFECT_NAMES: Record<EraseEffect, string> = {
@@ -118,7 +133,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [showLibraryDrawer, setShowLibraryDrawer] = useState(false);
   const [dashboardNotice, setDashboardNotice] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeMainTab, setActiveMainTab] = useState<'live' | 'library' | 'studio'>('live');
+  const [activeMainTab, setActiveMainTab] = useTeacherTabRoute();
   const [selectedQuickSwitchId, setSelectedQuickSwitchId] = useState<string>('');
   const [selectedSetupResourceId, setSelectedSetupResourceId] = useState<string>('');
 
@@ -133,7 +148,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [stagedUnitIndex, setStagedUnitIndex] = useState(0);
   const [stagedGranularity, setStagedGranularity] = useState<Granularity>('sentence');
   const [stagedHighlight, setStagedHighlight] = useState(true);
-  const [stagedPolicy, setStagedPolicy] = useState<TimingPolicy>('hold_then_erase');
+
   const [stagedHoldMs, setStagedHoldMs] = useState(3500);
   const [stagedEraseMs, setStagedEraseMs] = useState(1000);
   const [stagedWindowMs, setStagedWindowMs] = useState(3000);
@@ -146,10 +161,20 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [stagedSentenceEraseMs, setStagedSentenceEraseMs] = useState(1000);
   const [stagedParagraphHoldMs, setStagedParagraphHoldMs] = useState(12000);
   const [stagedParagraphEraseMs, setStagedParagraphEraseMs] = useState(2500);
-  const [timingProfileTab, setTimingProfileTab] = useState<Granularity>('sentence');
+  const [showFullArticlePreview, setShowFullArticlePreview] = useState(false);
+  const [unitReviewMode, setUnitReviewMode] = useState(false);
+  const unitReviewModeRef = React.useRef(unitReviewMode);
+  unitReviewModeRef.current = unitReviewMode;
+  const reviewReturnIndex = React.useRef(0);
 
   // Dynamic Pacing & Length Calibration (Requirement 7)
-  const [dynamicPacingEnabled, setDynamicPacingEnabled] = useState(true);
+  const [stagedTimingMode, setStagedTimingMode] = useState<TimingMode>('fixed');
+  const [stagedWordsPerSecond, setStagedWordsPerSecond] = useState(4);
+  const [stagedEraseSchedule, setStagedEraseSchedule] = useState<EraseSchedule>('after_reading');
+  const dynamicPacingEnabled = stagedTimingMode === 'auto';
+  const clockStatus = useRoomClock(activeRoom?.id);
+  const readingAreaRef = React.useRef<HTMLDivElement>(null);
+  const [isReadingFullscreen, setIsReadingFullscreen] = useState(false);
   const [readingWpm, setReadingWpm] = useState(160);
   const [autoMergeShortUnits, setAutoMergeShortUnits] = useState(false);
   const [minWordsPerUnit, setMinWordsPerUnit] = useState(5);
@@ -168,56 +193,32 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   activeRoomRef.current = activeRoom;
   const activePresentedResourceRef = React.useRef(activePresentedResource);
   activePresentedResourceRef.current = activePresentedResource;
-  const stagedUnitIndexRef = React.useRef(stagedUnitIndex);
-  stagedUnitIndexRef.current = stagedUnitIndex;
-  const currentUnitsListRef = React.useRef<string[]>([]);
-  const stagedSettingsRef = React.useRef({
-    stagedGranularity,
-    stagedHighlight,
-    stagedPolicy,
-    stagedHoldMs,
-    stagedEraseMs,
-    stagedWindowMs,
-    stagedEraseEffect,
-    stagedDustAngle,
-    stagedSentenceHoldMs,
-    stagedSentenceEraseMs,
-    stagedParagraphHoldMs,
-    stagedParagraphEraseMs,
-    dynamicPacingEnabled,
-    readingWpm,
-    autoMergeShortUnits,
-    minWordsPerUnit,
-  });
-  stagedSettingsRef.current = {
-    stagedGranularity,
-    stagedHighlight,
-    stagedPolicy,
-    stagedHoldMs,
-    stagedEraseMs,
-    stagedWindowMs,
-    stagedEraseEffect,
-    stagedDustAngle,
-    stagedSentenceHoldMs,
-    stagedSentenceEraseMs,
-    stagedParagraphHoldMs,
-    stagedParagraphEraseMs,
-    dynamicPacingEnabled,
-    readingWpm,
-    autoMergeShortUnits,
-    minWordsPerUnit,
-  };
+  const stagedGranularityRef = React.useRef(stagedGranularity);
+  stagedGranularityRef.current = stagedGranularity;
 
-  const lastBackPressTimeRef = React.useRef<number>(0);
+
   const autoAdvanceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoAdvanceTriggeredUnitRef = React.useRef<number | null>(null);
 
   // Active Room Live Progress calculation
-  const [roomProgress, setRoomProgress] = useState({
-    phase: 'idle',
-    elapsedMs: 0,
-    progress: 0,
+  const [roomProgress, setRoomProgress] = useState<CalculatedTimeline>({
+    phase: 'idle', elapsedMs: 0, progress: 0, remainingMs: 0, totalDurationMs: 0, effectiveHoldMs: 0, effectiveEraseMs: 0,
   });
+  const teacherAudio = useTeacherReadingAudio(activeRoom, roomProgress);
+  useEffect(() => {
+    const changed = () => setIsReadingFullscreen(document.fullscreenElement === readingAreaRef.current && !!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', changed);
+    return () => document.removeEventListener('fullscreenchange', changed);
+  }, []);
+  const toggleReadingFullscreen = async () => {
+    try {
+      if (document.fullscreenElement === readingAreaRef.current) await document.exitFullscreen();
+      else if (readingAreaRef.current?.requestFullscreen) await readingAreaRef.current.requestFullscreen();
+      else throw new Error('Trình duyệt không hỗ trợ fullscreen.');
+    } catch (error) {
+      setDashboardNotice({ type: 'error', text: error instanceof Error ? error.message : 'Không mở được fullscreen.' });
+    }
+  };
 
   // Load teacher resources on mount and auto-seed if empty
   const loadResources = async () => {
@@ -239,7 +240,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         }
         setStagedGranularity(existingRoom.granularity);
         setStagedHighlight(existingRoom.highlightEnabled);
-        setStagedPolicy(existingRoom.timingPolicy);
+
         setStagedHoldMs(existingRoom.holdDurationMs);
         setStagedEraseMs(existingRoom.eraseDurationMs);
         setStagedWindowMs(existingRoom.totalWindowMs);
@@ -251,7 +252,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         if (existingRoom.sentenceEraseMs) setStagedSentenceEraseMs(existingRoom.sentenceEraseMs);
         if (existingRoom.paragraphHoldMs) setStagedParagraphHoldMs(existingRoom.paragraphHoldMs);
         if (existingRoom.paragraphEraseMs) setStagedParagraphEraseMs(existingRoom.paragraphEraseMs);
-        if (existingRoom.dynamicPacingEnabled !== undefined) setDynamicPacingEnabled(existingRoom.dynamicPacingEnabled);
+        setStagedTimingMode(existingRoom.timingMode ?? 'fixed');
+        setStagedWordsPerSecond(getWordsPerSecond(existingRoom.wordsPerSecond));
+        setStagedEraseSchedule(existingRoom.eraseSchedule ?? 'after_reading');
+        setUnitReviewMode(existingRoom.playbackStatus === 'manual_show' && !existingRoom.isFullReview && !existingRoom.currentUnit?.isFullReview);
         if (existingRoom.readingWpm) setReadingWpm(existingRoom.readingWpm);
         if (existingRoom.autoMergeShortUnits !== undefined) setAutoMergeShortUnits(existingRoom.autoMergeShortUnits);
         if (existingRoom.minWordsPerUnit) setMinWordsPerUnit(existingRoom.minWordsPerUnit);
@@ -321,18 +325,24 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
     let animId: number;
     const loop = () => {
-      const calculated = calculateRoomTimeline(activeRoom, Date.now());
-      setRoomProgress({
-        phase: calculated.phase,
-        elapsedMs: calculated.elapsedMs,
-        progress: calculated.progress,
-      });
+      const calculated = getSyncedRoomTimeline(activeRoom);
+      setRoomProgress(calculated);
       animId = requestAnimationFrame(loop);
     };
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
   }, [activeRoom]);
+
+  const getStagedRoomOptions = (resource: ReadingResource) => {
+    const rate = stagedTimingMode === 'auto' ? validateWordsPerSecond(stagedWordsPerSecond) : getWordsPerSecond(stagedWordsPerSecond);
+    const raw = stagedGranularity === 'sentence' ? resource.sentences : resource.paragraphs;
+    return { timingMode: stagedTimingMode, wordsPerSecond: rate, eraseSchedule: stagedEraseSchedule,
+      sentenceHoldMs: stagedSentenceHoldMs, sentenceEraseMs: stagedSentenceEraseMs,
+      paragraphHoldMs: stagedParagraphHoldMs, paragraphEraseMs: stagedParagraphEraseMs,
+      dynamicPacingEnabled: false, readingWpm, autoMergeShortUnits, minWordsPerUnit,
+      customUnitsList: autoMergeShortUnits ? mergeShortUnits(raw, { minWords: minWordsPerUnit }) : raw };
+  };
 
   // Start new classroom room or re-use existing active room (Room Reuse)
   const handleOpenClassroom = async (res: ReadingResource) => {
@@ -361,32 +371,18 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           0,
           stagedGranularity,
           stagedHighlight,
-          stagedPolicy,
+          'hold_then_erase',
           stagedHoldMs,
           stagedEraseMs,
           stagedWindowMs,
           stagedEraseEffect,
-          stagedDustAngle
+          stagedDustAngle,
+          getStagedRoomOptions(res)
         );
         setActivePresentedResource(res);
         setStagedUnitIndex(0);
         setSelectedQuickSwitchId(res.id);
-        setActiveRoom(prev =>
-          prev
-            ? {
-                ...prev,
-                resourceId: res.id,
-                resourceTitle: res.title,
-                currentUnit: {
-                  index: 0,
-                  totalUnits: stagedGranularity === 'sentence' ? res.sentences.length : res.paragraphs.length,
-                  granularity: stagedGranularity,
-                  text: (stagedGranularity === 'sentence' ? res.sentences[0] : res.paragraphs[0]) || '',
-                  annotations: [],
-                },
-              }
-            : prev
-        );
+        // Room snapshots, not an optimistic partial payload, own live configuration.
         setShowLibraryDrawer(false);
         setActiveMainTab('live');
         setDashboardNotice({
@@ -401,12 +397,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         user.displayName || 'Teacher',
         stagedGranularity,
         stagedHighlight,
-        stagedPolicy,
+        'hold_then_erase',
         stagedHoldMs,
         stagedEraseMs,
         stagedWindowMs,
         stagedEraseEffect,
-        stagedDustAngle
+        stagedDustAngle,
+        getStagedRoomOptions(res)
       );
       setActivePresentedResource(res);
       setActiveRoom(newRoom);
@@ -477,23 +474,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         stagedUnitIndex,
         stagedGranularity,
         stagedHighlight,
-        stagedPolicy,
+        'hold_then_erase',
         stagedHoldMs,
         stagedEraseMs,
         stagedWindowMs,
         stagedEraseEffect,
         stagedDustAngle,
-        {
-          sentenceHoldMs: stagedSentenceHoldMs,
-          sentenceEraseMs: stagedSentenceEraseMs,
-          paragraphHoldMs: stagedParagraphHoldMs,
-          paragraphEraseMs: stagedParagraphEraseMs,
-          dynamicPacingEnabled,
-          readingWpm,
-          autoMergeShortUnits,
-          minWordsPerUnit,
-          customUnitsList: currentUnitsList,
-        }
+        getStagedRoomOptions(activePresentedResource)
       );
       setDashboardNotice({ type: 'success', text: `Đã lưu cài đặt và áp dụng đoạn #${stagedUnitIndex + 1} sang màn hình học sinh.` });
     } catch (err: any) {
@@ -505,45 +492,57 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
   // Playback commands
   const handlePlayTurn = async () => {
-    if (!activeRoom) return;
+    const currentRoom = activeRoomRef.current;
+    if (!currentRoom) return;
     try {
-      await playTurnCommand(activeRoom.id, activeRoom.revision);
+      await playTurnCommand(currentRoom.id, currentRoom.revision);
     } catch (err: any) {
       setDashboardNotice({ type: 'error', text: `Lỗi phát: ${err.message}` });
     }
   };
 
   const handlePauseTurn = async () => {
-    if (!activeRoom) return;
+    const currentRoom = activeRoomRef.current;
+    if (!currentRoom) return;
     try {
-      await pauseTurnCommand(activeRoom.id, activeRoom.revision, roomProgress.elapsedMs);
+      await pauseTurnCommand(currentRoom.id, currentRoom.revision, getSyncedRoomTimeline(currentRoom).elapsedMs);
     } catch (err: any) {
       setDashboardNotice({ type: 'error', text: `Lỗi tạm dừng: ${err.message}` });
     }
   };
 
   const handleResumeTurn = async () => {
-    if (!activeRoom) return;
+    const currentRoom = activeRoomRef.current;
+    if (!currentRoom) return;
     try {
-      await resumeTurnCommand(activeRoom.id, activeRoom.revision, activeRoom.pausedElapsedMs);
+      await resumeTurnCommand(currentRoom.id, currentRoom.revision, currentRoom.pausedElapsedMs);
     } catch (err: any) {
       setDashboardNotice({ type: 'error', text: `Lỗi tiếp tục: ${err.message}` });
     }
   };
 
   const handleShowTurn = async () => {
-    if (!activeRoom) return;
+    const currentRoom = activeRoomRef.current;
+    if (!currentRoom) return;
     try {
-      await showTurnCommand(activeRoom.id, activeRoom.revision);
+      let revision = currentRoom.revision;
+      if (!showFullArticlePreview && !currentRoom.isFullReview && !currentRoom.currentUnit?.isFullReview && currentRoom.granularity !== stagedGranularity) {
+        const resource = activePresentedResourceRef.current;
+        if (!resource) throw new Error('Bài đọc đang tải. Vui lòng thử lại.');
+        await selectAppliedUnitCommand(currentRoom.id, revision, resource, stagedUnitIndex, stagedGranularity);
+        revision = Math.max(revision + 1, activeRoomRef.current?.revision ?? 0);
+      }
+      await showTurnCommand(currentRoom.id, revision);
     } catch (err: any) {
       setDashboardNotice({ type: 'error', text: `Lỗi hiển thị: ${err.message}` });
     }
   };
 
   const handleHideTurn = async () => {
-    if (!activeRoom) return;
+    const currentRoom = activeRoomRef.current;
+    if (!currentRoom) return;
     try {
-      await hideTurnCommand(activeRoom.id, activeRoom.revision);
+      await hideTurnCommand(currentRoom.id, currentRoom.revision);
     } catch (err: any) {
       setDashboardNotice({ type: 'error', text: `Lỗi ẩn màn hình: ${err.message}` });
     }
@@ -596,120 +595,53 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     return mergeShortUnits(rawUnitsList, { minWords: minWordsPerUnit });
   }, [rawUnitsList, autoMergeShortUnits, minWordsPerUnit]);
 
-  currentUnitsListRef.current = currentUnitsList;
+
   const stagedText = currentUnitsList[stagedUnitIndex] || '';
 
-  // Dynamic Pacing calculation for active unit (Requirement 7)
   const dynamicHoldInfo = React.useMemo(() => {
-    if (!dynamicPacingEnabled || !stagedText) {
-      return {
-        holdDurationMs: stagedHoldMs,
-        wordCount: stagedText ? stagedText.trim().split(/\s+/).filter(Boolean).length : 0,
-        isAdjusted: false,
-        adjustedDiffMs: 0,
-      };
-    }
-    return calculateDynamicHoldDuration({
-      text: stagedText,
-      baseHoldMs: stagedHoldMs,
-      granularity: stagedGranularity,
-      readingWpm,
-    });
-  }, [stagedText, stagedHoldMs, stagedGranularity, dynamicPacingEnabled, readingWpm]);
-
-  // Helper to retrieve calibrated hold duration for any index
-  const getDynamicHoldForIndex = (index: number) => {
-    const text = currentUnitsList[index] || '';
-    if (!dynamicPacingEnabled || !text) return stagedHoldMs;
-    return calculateDynamicHoldDuration({
-      text,
-      baseHoldMs: stagedHoldMs,
-      granularity: stagedGranularity,
-      readingWpm,
-    }).holdDurationMs;
-  };
-
+    const hold = stagedTimingMode === 'auto' ? calculateAutoReadingMs(stagedText, getWordsPerSecond(stagedWordsPerSecond)) : stagedHoldMs;
+    return { holdDurationMs: hold, wordCount: stagedText.trim().split(/\s+/).filter(Boolean).length,
+      isAdjusted: hold !== stagedHoldMs, adjustedDiffMs: hold - stagedHoldMs };
+  }, [stagedText, stagedTimingMode, stagedWordsPerSecond, stagedHoldMs]);
   const stagedApprovedSpans = activePresentedResource
-    ? activePresentedResource.annotations
-        .filter(a => a.status === 'approved' && (stagedText.includes(a.text) || (a.unitIndex === stagedUnitIndex && a.unitType === stagedGranularity)))
-        .map(a => ({
-          id: a.id,
-          text: a.text,
-          startOffset: a.startOffset,
-          endOffset: a.endOffset,
-          type: a.type,
-          meaning: a.meaning,
-        }))
-    : [];
+    ? getUnitApprovedSpans(activePresentedResource, stagedText, stagedUnitIndex, stagedGranularity) : [];
+
+  const fullReviewApprovedSpans = React.useMemo(() => activePresentedResource
+    ? getUnitApprovedSpans(activePresentedResource, activePresentedResource.canonicalText, 0, 'paragraph') : [], [activePresentedResource]);
 
   const stagedSlices = buildRenderSlices(stagedText, stagedHighlight ? stagedApprovedSpans : []);
 
-  // Granularity switcher: sentence vs paragraph (Requirement 5 & 6)
+  // Private staging only. Apply explicitly installs granularity/timing in the room.
   const handleSwitchGranularity = async (newGranularity: Granularity) => {
-    if (newGranularity === stagedGranularity && !activeRoom?.isFullReview) return;
-    setStagedGranularity(newGranularity);
-    setStagedUnitIndex(0);
-
-    const nextHoldMs = newGranularity === 'sentence' ? stagedSentenceHoldMs : stagedParagraphHoldMs;
-    const nextEraseMs = newGranularity === 'sentence' ? stagedSentenceEraseMs : stagedParagraphEraseMs;
-    setStagedHoldMs(nextHoldMs);
-    setStagedEraseMs(nextEraseMs);
-
-    if (activeRoom && activePresentedResource) {
-      const raw = newGranularity === 'sentence'
-        ? activePresentedResource.sentences
-        : activePresentedResource.paragraphs;
-      const targetUnits = autoMergeShortUnits ? mergeShortUnits(raw, { minWords: minWordsPerUnit }) : raw;
-
+    setShowFullArticlePreview(false);
+    setStagedGranularity(newGranularity); setStagedUnitIndex(0);
+    setStagedHoldMs(newGranularity === 'sentence' ? stagedSentenceHoldMs : stagedParagraphHoldMs);
+    setStagedEraseMs(newGranularity === 'sentence' ? stagedSentenceEraseMs : stagedParagraphEraseMs);
+    const room = activeRoomRef.current, resource = activePresentedResourceRef.current;
+    if (room && resource && (room.isFullReview || room.currentUnit?.isFullReview)) {
+      const index = newGranularity === room.granularity ? reviewReturnIndex.current : 0;
       try {
-        await applyToRoomCommand(
-          activeRoom.id,
-          activeRoom.revision,
-          activePresentedResource,
-          0,
-          newGranularity,
-          stagedHighlight,
-          stagedPolicy,
-          nextHoldMs,
-          nextEraseMs,
-          stagedWindowMs,
-          stagedEraseEffect,
-          stagedDustAngle,
-          {
-            sentenceHoldMs: stagedSentenceHoldMs,
-            sentenceEraseMs: stagedSentenceEraseMs,
-            paragraphHoldMs: stagedParagraphHoldMs,
-            paragraphEraseMs: stagedParagraphEraseMs,
-            dynamicPacingEnabled,
-            readingWpm,
-            autoMergeShortUnits,
-            minWordsPerUnit,
-            customUnitsList: targetUnits,
-          }
-        );
-        setDashboardNotice({
-          type: 'success',
-          text: `Đã chuyển sang chế độ ${newGranularity === 'sentence' ? 'Câu (Sentence)' : 'Đoạn (Paragraph)'} và áp dụng thời gian ${nextHoldMs / 1000}s.`,
-        });
-      } catch (err: any) {
-        console.error('Error switching granularity:', err);
-      }
+        await selectAppliedUnitCommand(room.id, room.revision, resource, index, newGranularity);
+        setStagedUnitIndex(index);
+        unitReviewModeRef.current = false; setUnitReviewMode(false);
+      } catch (error) { setDashboardNotice({type:'error',text:error instanceof Error ? error.message : 'Không thoát được review toàn bài.'}); }
     }
   };
 
   // Full Text Review Mode handlers (Requirement 6)
-  const isFullReviewActive = Boolean(activeRoom?.isFullReview);
+  const isFullReviewActive = Boolean(activeRoom?.isFullReview || activeRoom?.currentUnit?.isFullReview);
 
   const handleToggleFullReview = async () => {
     if (!activeRoom || !activePresentedResource) return;
     try {
-      const nextReview = !isFullReviewActive;
-      await setFullReviewCommand(
-        activeRoom.id,
-        activeRoom.revision,
-        activePresentedResource,
-        nextReview
-      );
+      const nextReview = !(isFullReviewActive && roomProgress.phase === 'manual_show');
+      if (nextReview) {
+        setUnitReviewMode(false);
+        if (!isFullReviewActive) reviewReturnIndex.current = activeRoom.currentUnit?.index ?? 0;
+        await setFullReviewCommand(activeRoom.id, activeRoom.revision, activePresentedResource, true);
+      } else {
+        await selectAppliedUnitCommand(activeRoom.id, activeRoom.revision, activePresentedResource, reviewReturnIndex.current);
+      }
       setDashboardNotice({
         type: nextReview ? 'success' : 'info',
         text: nextReview
@@ -722,221 +654,44 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   };
 
   const handleExitFullReview = async () => {
+    setShowFullArticlePreview(false);
     if (!activeRoom || !activePresentedResource) return;
     try {
-      await setFullReviewCommand(
-        activeRoom.id,
-        activeRoom.revision,
-        activePresentedResource,
-        false
-      );
+      await selectAppliedUnitCommand(activeRoom.id, activeRoom.revision, activePresentedResource, reviewReturnIndex.current);
       setDashboardNotice({ type: 'info', text: 'Đã thoát chế độ Review toàn bài.' });
     } catch (err: any) {
       console.error('Error exiting review:', err);
     }
   };
 
-  // Step-only navigation (updates staged unit and room without auto-triggering play)
-  const handlePreviousSentenceOnly = async () => {
-    const currentRoom = activeRoomRef.current;
-    const resource = activePresentedResourceRef.current;
-    const currentIndex = stagedUnitIndexRef.current;
-    const settings = stagedSettingsRef.current;
-
-    if (!currentRoom || !resource) return;
-    if (currentIndex <= 0) {
-      setDashboardNotice({ type: 'info', text: 'Đang ở câu / đoạn đầu tiên!' });
-      return;
-    }
-    const prevIdx = currentIndex - 1;
-    setStagedUnitIndex(prevIdx);
-    const holdMs = getDynamicHoldForIndex(prevIdx);
-
+  // Commands use the currently APPLIED unit/settings, never private staging.
+  const navigateAppliedUnit = async (delta: number, play: boolean) => {
+    const currentRoom = activeRoomRef.current; const resource = activePresentedResourceRef.current;
+    if (!currentRoom || !resource || currentRoom.isFullReview || currentRoom.currentUnit?.isFullReview) return;
+    const nextIndex = (currentRoom.currentUnit?.index ?? 0) + delta;
+    if (nextIndex < 0 || nextIndex >= (currentRoom.currentUnit?.totalUnits ?? 0)) return;
+    teacherAudio.unlock();
     try {
-      await applyToRoomCommand(
-        currentRoom.id,
-        currentRoom.revision,
-        resource,
-        prevIdx,
-        settings.stagedGranularity,
-        settings.stagedHighlight,
-        settings.stagedPolicy,
-        holdMs,
-        settings.stagedEraseMs,
-        settings.stagedWindowMs,
-        settings.stagedEraseEffect,
-        settings.stagedDustAngle,
-        {
-          sentenceHoldMs: stagedSentenceHoldMs,
-          sentenceEraseMs: stagedSentenceEraseMs,
-          paragraphHoldMs: stagedParagraphHoldMs,
-          paragraphEraseMs: stagedParagraphEraseMs,
-          dynamicPacingEnabled,
-          readingWpm,
-          autoMergeShortUnits,
-          minWordsPerUnit,
-          customUnitsList: currentUnitsList,
-        }
-      );
-    } catch (err: any) {
-      console.error('Error going to previous unit:', err);
-      setDashboardNotice({ type: 'error', text: `Lỗi lùi câu: ${err.message}` });
+      await selectAppliedUnitCommand(currentRoom.id, currentRoom.revision, resource, nextIndex);
+      if (stagedGranularityRef.current === currentRoom.granularity) setStagedUnitIndex(nextIndex);
+      if (play) {
+        const revision = activeRoomRef.current?.revision ?? currentRoom.revision + 1;
+        if (unitReviewModeRef.current) await showTurnCommand(currentRoom.id, Math.max(revision, currentRoom.revision + 1));
+        else await playTurnCommand(currentRoom.id, Math.max(revision, currentRoom.revision + 1));
+      }
+    } catch (error) {
+      setDashboardNotice({ type: 'error', text: error instanceof Error ? error.message : 'Lỗi chuyển đơn vị đọc.' });
     }
   };
-
-  const handleNextSentenceOnly = async () => {
-    const currentRoom = activeRoomRef.current;
-    const resource = activePresentedResourceRef.current;
-    const units = currentUnitsListRef.current;
-    const currentIndex = stagedUnitIndexRef.current;
-    const settings = stagedSettingsRef.current;
-
-    if (!currentRoom || !resource) return;
-    if (currentIndex >= units.length - 1) {
-      setDashboardNotice({ type: 'info', text: 'Đã đến câu / đoạn cuối cùng của bài đọc!' });
-      return;
-    }
-    const nextIdx = currentIndex + 1;
-    setStagedUnitIndex(nextIdx);
-    const holdMs = getDynamicHoldForIndex(nextIdx);
-
-    try {
-      await applyToRoomCommand(
-        currentRoom.id,
-        currentRoom.revision,
-        resource,
-        nextIdx,
-        settings.stagedGranularity,
-        settings.stagedHighlight,
-        settings.stagedPolicy,
-        holdMs,
-        settings.stagedEraseMs,
-        settings.stagedWindowMs,
-        settings.stagedEraseEffect,
-        settings.stagedDustAngle,
-        {
-          sentenceHoldMs: stagedSentenceHoldMs,
-          sentenceEraseMs: stagedSentenceEraseMs,
-          paragraphHoldMs: stagedParagraphHoldMs,
-          paragraphEraseMs: stagedParagraphEraseMs,
-          dynamicPacingEnabled,
-          readingWpm,
-          autoMergeShortUnits,
-          minWordsPerUnit,
-          customUnitsList: currentUnitsList,
-        }
-      );
-    } catch (err: any) {
-      console.error('Error advancing to next unit:', err);
-      setDashboardNotice({ type: 'error', text: `Lỗi chuyển câu tiếp: ${err.message}` });
-    }
-  };
-
-  // Slide Remote Clicker & Hotkey Handlers
-  const handleAdvanceAndPlay = async () => {
-    const currentRoom = activeRoomRef.current;
-    const resource = activePresentedResourceRef.current;
-    const units = currentUnitsListRef.current;
-    const currentIndex = stagedUnitIndexRef.current;
-    const settings = stagedSettingsRef.current;
-
-    if (!currentRoom || !resource) return;
-    if (currentIndex >= units.length - 1) {
-      setDashboardNotice({ type: 'info', text: 'Đã đến câu / đoạn cuối cùng của bài đọc!' });
-      return;
-    }
-    const nextIdx = currentIndex + 1;
-    setStagedUnitIndex(nextIdx);
-    const holdMs = getDynamicHoldForIndex(nextIdx);
-
-    try {
-      await applyToRoomCommand(
-        currentRoom.id,
-        currentRoom.revision,
-        resource,
-        nextIdx,
-        settings.stagedGranularity,
-        settings.stagedHighlight,
-        settings.stagedPolicy,
-        holdMs,
-        settings.stagedEraseMs,
-        settings.stagedWindowMs,
-        settings.stagedEraseEffect,
-        settings.stagedDustAngle,
-        {
-          sentenceHoldMs: stagedSentenceHoldMs,
-          sentenceEraseMs: stagedSentenceEraseMs,
-          paragraphHoldMs: stagedParagraphHoldMs,
-          paragraphEraseMs: stagedParagraphEraseMs,
-          dynamicPacingEnabled,
-          readingWpm,
-          autoMergeShortUnits,
-          minWordsPerUnit,
-          customUnitsList: currentUnitsList,
-        }
-      );
-      const latestRevision = activeRoomRef.current?.revision ?? currentRoom.revision;
-      await playTurnCommand(currentRoom.id, Math.max(latestRevision, currentRoom.revision + 1));
-    } catch (err: any) {
-      console.error('Error advancing to next unit:', err);
-      setDashboardNotice({ type: 'error', text: `Lỗi chuyển câu tiếp: ${err.message}` });
-    }
-  };
-
-  const handlePreviousAndPlay = async () => {
-    const currentRoom = activeRoomRef.current;
-    const resource = activePresentedResourceRef.current;
-    const currentIndex = stagedUnitIndexRef.current;
-    const settings = stagedSettingsRef.current;
-
-    if (!currentRoom || !resource) return;
-    if (currentIndex <= 0) {
-      setDashboardNotice({ type: 'info', text: 'Đang ở câu / đoạn đầu tiên!' });
-      return;
-    }
-    const prevIdx = currentIndex - 1;
-    setStagedUnitIndex(prevIdx);
-    const holdMs = getDynamicHoldForIndex(prevIdx);
-
-    try {
-      await applyToRoomCommand(
-        currentRoom.id,
-        currentRoom.revision,
-        resource,
-        prevIdx,
-        settings.stagedGranularity,
-        settings.stagedHighlight,
-        settings.stagedPolicy,
-        holdMs,
-        settings.stagedEraseMs,
-        settings.stagedWindowMs,
-        settings.stagedEraseEffect,
-        settings.stagedDustAngle,
-        {
-          sentenceHoldMs: stagedSentenceHoldMs,
-          sentenceEraseMs: stagedSentenceEraseMs,
-          paragraphHoldMs: stagedParagraphHoldMs,
-          paragraphEraseMs: stagedParagraphEraseMs,
-          dynamicPacingEnabled,
-          readingWpm,
-          autoMergeShortUnits,
-          minWordsPerUnit,
-          customUnitsList: currentUnitsList,
-        }
-      );
-      const latestRevision = activeRoomRef.current?.revision ?? currentRoom.revision;
-      await playTurnCommand(currentRoom.id, Math.max(latestRevision, currentRoom.revision + 1));
-    } catch (err: any) {
-      console.error('Error going to previous unit:', err);
-      setDashboardNotice({ type: 'error', text: `Lỗi lùi về câu trước: ${err.message}` });
-    }
-  };
+  const handleAdvanceAndPlay = () => navigateAppliedUnit(1, true);
+  const handlePreviousAndPlay = () => navigateAppliedUnit(-1, true);
 
   const handleReplayCurrent = async () => {
     const currentRoom = activeRoomRef.current;
     if (!currentRoom) return;
     try {
-      await playTurnCommand(currentRoom.id, currentRoom.revision);
+      if (unitReviewModeRef.current) await showTurnCommand(currentRoom.id, currentRoom.revision);
+      else await playTurnCommand(currentRoom.id, currentRoom.revision);
     } catch (err: any) {
       console.error('Error replaying current unit:', err);
       setDashboardNotice({ type: 'error', text: `Lỗi phát lại: ${err.message}` });
@@ -946,7 +701,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const handleTogglePlayPause = async () => {
     const currentRoom = activeRoomRef.current;
     if (!currentRoom) return;
-    if (currentRoom.playbackStatus === 'playing') {
+    if (unitReviewModeRef.current) {
+      await handleToggleBlankOrShow();
+    } else if (currentRoom.playbackStatus === 'playing') {
       await handlePauseTurn();
     } else if (currentRoom.playbackStatus === 'paused') {
       await handleResumeTurn();
@@ -958,33 +715,29 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const handleToggleBlankOrShow = async () => {
     const currentRoom = activeRoomRef.current;
     if (!currentRoom) return;
-    if (currentRoom.playbackStatus === 'idle') {
-      await handleShowTurn();
-    } else {
-      await handleHideTurn();
+    if (!showFullArticlePreview && !currentRoom.isFullReview && !currentRoom.currentUnit?.isFullReview) {
+      unitReviewModeRef.current = true;
+      setUnitReviewMode(true);
     }
+    const phase = getSyncedRoomTimeline(currentRoom).phase;
+    if (['idle', 'blank_finished'].includes(phase)) await handleShowTurn();
+    else await handleHideTurn();
   };
 
-  const handleBackKey = () => {
-    const now = Date.now();
-    if (now - lastBackPressTimeRef.current <= 1500 && stagedUnitIndexRef.current > 0) {
-      lastBackPressTimeRef.current = 0;
-      handlePreviousAndPlay();
-    } else {
-      lastBackPressTimeRef.current = now;
-      handleReplayCurrent();
-    }
-  };
-
-  // Presentation Remote & Hotkeys Listener (PageDown/Up, ArrowLeft/Right, Space, B/.)
+  // Keyboard controls: previous, replay, play/pause, next and blank/show.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat || e.isComposing) return;
+      const control = (e.target as HTMLElement | null)?.closest('button, summary, a');
+      if (control && (e.code === 'Space' || e.key === ' ' || e.key === 'Enter')) return;
       // Guard: ignore keydown when active element is input, textarea, or contentEditable
       const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-testid="private-unit-preview"]')) return;
       if (
         target &&
         (target.tagName === 'INPUT' ||
           target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
           target.isContentEditable)
       ) {
         return;
@@ -999,12 +752,16 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         return;
       }
 
+      if ((activeRoomRef.current.isFullReview || activeRoomRef.current.currentUnit?.isFullReview) && ['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', 'r', 'R', ' '].includes(e.key)) return;
       if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         e.preventDefault();
         handleAdvanceAndPlay();
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
-        handleBackKey();
+        handlePreviousAndPlay();
+      } else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        handleReplayCurrent();
       } else if (e.code === 'Space' || e.key === ' ') {
         e.preventDefault();
         handleTogglePlayPause();
@@ -1018,7 +775,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isEditorOpen, reviewingResource, showStudioModal, showLibraryDrawer]);
+  }, [isEditorOpen, reviewingResource, showStudioModal, showLibraryDrawer, showFullArticlePreview]);
 
   // Auto-Advance Controller: when phase === 'blank_finished', after 1.5s comfortable pause, advance and play
   useEffect(() => {
@@ -1035,12 +792,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
 
     if (roomProgress.phase === 'blank_finished') {
-      if (autoAdvanceTriggeredUnitRef.current === stagedUnitIndex) {
+      const index = activeRoom.currentUnit?.index ?? 0;
+      if (autoAdvanceTriggeredUnitRef.current === index) {
         return;
       }
-      autoAdvanceTriggeredUnitRef.current = stagedUnitIndex;
+      autoAdvanceTriggeredUnitRef.current = index;
       autoAdvanceTimerRef.current = setTimeout(() => {
-        if (stagedUnitIndex < currentUnitsList.length - 1) {
+        if (index < (activeRoom.currentUnit?.totalUnits ?? 0) - 1) {
           handleAdvanceAndPlay();
         } else {
           setAutoAdvance(false);
@@ -1067,8 +825,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     autoAdvance,
     roomProgress.phase,
     activeRoom?.playbackStatus,
-    stagedUnitIndex,
-    currentUnitsList.length,
+    activeRoom?.currentUnit?.index,
+    activeRoom?.currentUnit?.totalUnits,
   ]);
 
   // Render Library Content (reusable for main view or slide-over drawer)
@@ -1434,7 +1192,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             {/* Left / Center Column: lg:col-span-8 (~70% width) */}
             <div className="lg:col-span-8 space-y-4">
               {/* GỘP CHUNG MỘT KHỐI THỐNG NHẤT: Nội dung câu + Điều hướng + Trình chiếu Slide Remote */}
-              <div className="neo-box bg-white p-4 sm:p-5 space-y-4">
+              <div ref={readingAreaRef} data-testid="teacher-reading-area" className={`neo-box bg-white p-4 sm:p-5 space-y-4 ${isReadingFullscreen ? 'h-screen w-screen overflow-y-auto lg:pr-[44%] flex flex-col' : ''}`}>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-xs font-mono">Vùng đọc & điều hướng</span>
+                  <button type="button" onClick={toggleReadingFullscreen} aria-label={isReadingFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình vùng đọc'} title={isReadingFullscreen ? 'Thoát toàn màn hình (Esc)' : 'Toàn màn hình vùng đọc và learner'} className="neo-btn-sm px-2 py-1 bg-white text-black flex items-center gap-1">
+                    {isReadingFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+                  </button>
+                </div>
                 {/* Header: Số thứ tự câu + Thanh tiến độ mini + Sĩ số + Mã phòng + Trạng thái phát */}
                 <div className="space-y-2 pb-3 border-b border-black">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1515,7 +1279,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                 </div>
 
                 {/* Chế độ trình chiếu: Câu (Sentence) | Đoạn (Paragraph) | Toàn bài (Full Review) (Requirement 5 & 6) */}
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[#FFFDF0] border-2 border-black shadow-[1px_1px_0px_#000]">
+                <div className="flex flex-wrap items-center justify-between gap-2 py-1 text-xs">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-mono font-bold uppercase text-neutral-700">Đơn vị đọc:</span>
                     <div className="inline-flex border border-black bg-white shadow-[1px_1px_0px_#000]">
@@ -1546,38 +1310,52 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     </div>
                   </div>
 
-                  {/* Nút Xem lại toàn bộ bài đọc (Full Text Review Mode - Requirement 6) */}
                   <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleToggleFullReview}
-                      className={`neo-btn-sm px-2.5 py-1 text-xs font-mono font-black uppercase flex items-center gap-1.5 transition-all ${
-                        isFullReviewActive
-                          ? 'bg-[#00D2FF] text-black ring-2 ring-black font-black'
-                          : 'bg-white text-black hover:bg-neutral-100'
-                      }`}
-                      title="Hiển thị toàn bộ bài đọc không giới hạn thời gian cho học sinh ôn tập và thảo luận"
-                    >
-                      <BookOpen size={13} />
-                      <span>{isFullReviewActive ? 'Đang bật Review Toàn bài' : '📖 Xem lại toàn bộ bài đọc'}</span>
-                    </button>
-
-                    {isFullReviewActive && (
-                      <button
-                        type="button"
-                        onClick={handleExitFullReview}
-                        className="neo-btn-sm px-2 py-1 bg-[#FF3838] text-white text-xs font-mono font-bold uppercase hover:bg-red-600"
-                        title="Thoát chế độ Review toàn bài để trở về từng câu/đoạn"
-                      >
-                        ✕ Thoát
-                      </button>
-                    )}
+                    <button type="button" onClick={() => setShowFullArticlePreview(value => !value)}
+                      aria-label="Preview toàn bài riêng teacher" aria-pressed={showFullArticlePreview}
+                      title="Preview toàn bài — chỉ teacher, không thay đổi learner"
+                      className="neo-btn-sm px-2 py-1 bg-white text-black"><BookOpen size={16} /></button>
+                    {showFullArticlePreview && <button type="button" onClick={handleToggleFullReview}
+                      aria-label={isFullReviewActive && roomProgress.phase === 'manual_show' ? 'Ngừng chiếu toàn bài' : 'Chiếu toàn bài cho học viên'}
+                      title="Bật / tắt chiếu toàn bài cho learner" className="neo-btn-sm px-2 py-1 bg-[#FFE500] text-black"><Radio size={16} /></button>}
+                    {isFullReviewActive && <button type="button" onClick={handleExitFullReview} aria-label="Thoát review learner" title="Thoát review learner"
+                      className="neo-btn-sm px-2 py-1 bg-white text-black"><X size={16} /></button>}
                   </div>
                 </div>
 
+                <div data-testid="reading-highlight-toggle" className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                  <label className={`inline-flex cursor-pointer items-center gap-2 rounded-full border-2 border-black px-3 py-1.5 font-bold shadow-[2px_2px_0px_#000] ${stagedHighlight ? 'bg-[#FFE500]' : 'bg-white'}`}>
+                    <Highlighter size={16} /><span>Highlights</span><input type="checkbox" aria-label="Hiển thị Highlights" checked={stagedHighlight}
+                    onChange={e => setStagedHighlight(e.target.checked)} className="accent-black" />
+                  </label>
+                  <span className="rounded-full border border-black/20 bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600">{stagedHighlight !== activeRoom.highlightEnabled ? 'Chưa áp dụng · cần Apply' : 'Đã áp dụng'}</span>
+                </div>
+                {clockStatus.failed && <p role="status" className="text-xs text-red-700">Chưa đồng bộ được giờ server. Kiểm tra kết nối rồi thử Replay.</p>}
+                <TeacherPrivateUnitPreview room={activeRoom} resource={activePresentedResource} currentIndex={isFullReviewActive ? reviewReturnIndex.current : undefined} />
+
                 {/* Nội dung câu / đoạn / toàn bài hiện tại (Reading Text Display: Chữ to, rõ ràng) */}
-                <div className="p-4 sm:p-6 bg-paper-reading border-2 border-black min-h-[140px] flex flex-col items-center justify-center text-center shadow-[2px_2px_0px_#000] relative">
-                  {isFullReviewActive ? (
+                <div data-testid="teacher-reading-canvas" className={`p-4 sm:p-6 bg-paper-reading border-2 border-black flex flex-col items-center justify-center text-center shadow-[2px_2px_0px_#000] relative ${isReadingFullscreen ? 'flex-1 min-h-[50vh]' : 'min-h-[140px]'}`}>
+                  {showFullArticlePreview ? (
+                    <div data-testid="private-full-article-preview" className="w-full text-left space-y-2 max-h-[340px] overflow-y-auto">
+                      <p className="text-xs font-mono text-neutral-500">Preview riêng teacher · chỉ chiếu khi bấm icon phát sóng.</p>
+                      <ReadingUnitText room={{ ...activeRoom, highlightEnabled: stagedHighlight }} timeline={{ ...roomProgress, phase: 'manual_show' }}
+                        fullReview text={activePresentedResource.canonicalText} annotations={fullReviewApprovedSpans}
+                        className="font-reading text-lg sm:text-xl leading-relaxed" />
+                    </div>
+                  ) : !isFullReviewActive && stagedGranularity !== activeRoom.granularity && stagedText ? (
+                    <div data-testid="private-staged-unit-preview" className="w-full space-y-2">
+                      <p className="text-xs font-mono text-neutral-500">Preview riêng teacher · {stagedGranularity === 'sentence' ? 'Câu' : 'Đoạn'} · cần Apply hoặc Hiện để chuyển learner.</p>
+                      <ReadingUnitText room={{...activeRoom,highlightEnabled:stagedHighlight}} timeline={{...roomProgress,phase:'manual_show'}} text={stagedText} annotations={stagedApprovedSpans} className="font-reading text-xl sm:text-2xl md:text-3xl leading-relaxed" />
+                    </div>
+                  ) : unitReviewMode && roomProgress.phase === 'idle' ? (
+                    <p data-testid="teacher-reading-hidden" className="text-xs font-mono text-neutral-500">Đang ẩn trên teacher và learner.</p>
+                  ) : ['hold', 'erase', 'paused', 'manual_show'].includes(roomProgress.phase) && activeRoom.currentUnit && !isFullReviewActive ? (
+                    <div className="w-full space-y-3">
+                      <ReadingCountdown timeline={roomProgress} />
+                      <ReadingUnitText room={activeRoom} timeline={roomProgress} className="font-reading text-xl sm:text-2xl md:text-3xl leading-relaxed" />
+                      <p className="text-[10px] font-mono text-neutral-500">{roomProgress.phase === 'manual_show' ? 'Review câu/đoạn · không đếm giờ · cùng nội dung learner.' : 'Trạng thái learner đã Apply.'}</p>
+                    </div>
+                  ) : isFullReviewActive ? (
                     /* Full Text Review Mode Display */
                     <div className="w-full text-left space-y-3 py-2 max-h-[340px] overflow-y-auto pr-1 select-text">
                       <div className="bg-[#FFE500] border border-black p-2 text-xs font-mono font-bold flex items-center justify-between">
@@ -1588,42 +1366,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                           Không giới hạn thời gian
                         </span>
                       </div>
-                      <div className="font-reading text-lg sm:text-xl leading-relaxed text-[#111111] space-y-4">
-                        {activePresentedResource.canonicalText.split(/\n\s*\n/).map((para, pIdx) => {
-                          const paraSlices = buildRenderSlices(
-                            para,
-                            stagedHighlight
-                              ? activePresentedResource.annotations
-                                  .filter(a => a.status === 'approved')
-                                  .map(a => ({
-                                    id: a.id,
-                                    text: a.text,
-                                    startOffset: a.startOffset,
-                                    endOffset: a.endOffset,
-                                    type: a.type,
-                                    meaning: a.meaning,
-                                  }))
-                              : []
-                          );
-                          return (
-                            <p key={pIdx}>
-                              {paraSlices.map((slice, sIdx) =>
-                                slice.isHighlight ? (
-                                  <mark
-                                    key={sIdx}
-                                    className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block shadow-[1px_1px_0px_#000]"
-                                    title={slice.annotation?.meaning}
-                                  >
-                                    {slice.text}
-                                  </mark>
-                                ) : (
-                                  <span key={sIdx}>{slice.text}</span>
-                                )
-                              )}
-                            </p>
-                          );
-                        })}
-                      </div>
+                      <ReadingUnitText room={activeRoom} timeline={roomProgress} className="font-reading text-lg sm:text-xl leading-relaxed text-[#111111]" />
                     </div>
                   ) : stagedText ? (
                     <>
@@ -1668,187 +1411,44 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   )}
                 </div>
 
-                {/* Thanh Điều hướng & Slide Remote HUD nằm NGAY DƯỚI nội dung câu */}
-                <div className="space-y-3 pt-1">
-                  {/* Hàng 1: Nút ← Đơn vị trước | Đơn vị X / Y | Đơn vị tiếp → */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-neutral-50 border border-black">
-                    <button
-                      type="button"
-                      disabled={stagedUnitIndex <= 0 || isFullReviewActive}
-                      onClick={handlePreviousSentenceOnly}
-                      className="neo-btn-sm px-3 py-1 bg-white text-black text-xs font-bold disabled:opacity-40"
-                    >
-                      <ChevronLeft size={14} className="inline mr-1" /> {stagedGranularity === 'paragraph' ? 'Đoạn' : 'Câu'} trước
-                    </button>
-
-                    <span className="font-mono text-xs font-black uppercase text-black">
-                      {isFullReviewActive
-                        ? 'Review Toàn bài'
-                        : `${stagedGranularity === 'paragraph' ? 'Đoạn' : 'Câu'} ${stagedUnitIndex + 1} / ${currentUnitsList.length}`}
-                    </span>
-
-                    <button
-                      type="button"
-                      disabled={stagedUnitIndex >= currentUnitsList.length - 1 || isFullReviewActive}
-                      onClick={handleNextSentenceOnly}
-                      className="neo-btn-sm px-3 py-1 bg-white text-black text-xs font-bold disabled:opacity-40"
-                    >
-                      {stagedGranularity === 'paragraph' ? 'Đoạn' : 'Câu'} tiếp <ChevronRight size={14} className="inline ml-1" />
-                    </button>
+                <nav aria-label="Điều khiển đọc bằng bàn phím" className="space-y-2">
+                  <div className="text-center text-xs font-mono">
+                    <span>{isFullReviewActive ? 'Learner: toàn bài' : `${activeRoom.granularity === 'paragraph' ? 'Đoạn' : 'Câu'} ${(activeRoom.currentUnit?.index ?? 0) + 1} / ${activeRoom.currentUnit?.totalUnits ?? 0}`}</span>
                   </div>
-
-                  {/* Hàng 2: Bộ nút Slide Remote Clicker */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    {/* Nút 1: Lùi 2 lần */}
-                    <button
-                      type="button"
-                      onClick={handlePreviousAndPlay}
-                      disabled={stagedUnitIndex <= 0}
-                      className="neo-btn-sm py-2 px-1.5 bg-white text-black text-xs font-bold flex flex-col items-center justify-center gap-1 hover:bg-neutral-100 disabled:opacity-40 shadow-[1px_1px_0px_#000]"
-                      title="Lùi về câu trước và phát ngay (Hoặc bấm phím lùi 2 lần)"
-                    >
-                      <span className="font-black text-xs">⏮️ Lùi 2 lần</span>
-                      <span className="text-[10px] text-neutral-600 font-normal leading-tight text-center">(Câu trước & Phát)</span>
-                      <span className="neo-badge bg-neutral-100 text-neutral-700 text-[9px] py-0 px-1 border border-black/40">
-                        [ ← / PgUp x2 ]
-                      </span>
-                    </button>
-
-                    {/* Nút 2: Lùi 1 lần */}
-                    <button
-                      type="button"
-                      onClick={handleReplayCurrent}
-                      className="neo-btn-sm py-2 px-1.5 bg-[#FFE500] text-black text-xs font-bold flex flex-col items-center justify-center gap-1 hover:bg-yellow-300 shadow-[1px_1px_0px_#000]"
-                      title="Phát lại câu này từ đầu"
-                    >
-                      <span className="font-black text-xs">🔄 Lùi 1 lần</span>
-                      <span className="text-[10px] text-neutral-800 font-normal leading-tight text-center">(Phát lại câu này)</span>
-                      <span className="neo-badge bg-white text-black text-[9px] py-0 px-1 border border-black/40">
-                        [ ← / PgUp x1 ]
-                      </span>
-                    </button>
-
-                    {/* Nút 3: Phát / Tạm dừng */}
-                    <button
-                      type="button"
-                      onClick={handleTogglePlayPause}
-                      className={`neo-btn-sm py-2 px-1.5 text-xs font-bold flex flex-col items-center justify-center gap-1 shadow-[1px_1px_0px_#000] ${
-                        activeRoom.playbackStatus === 'playing'
-                          ? 'bg-[#00D2FF] text-black hover:bg-cyan-300'
-                          : 'bg-[#4ADE80] text-black hover:bg-green-400'
-                      }`}
-                      title="Phát hoặc Tạm dừng"
-                    >
-                      <span className="font-black text-xs">
-                        {activeRoom.playbackStatus === 'playing' ? '⏸️ Tạm dừng' : '▶️ Phát'}
-                      </span>
-                      <span className="text-[10px] font-normal leading-tight text-center">
-                        {activeRoom.playbackStatus === 'playing' ? '(Đang đếm giờ)' : '(Bắt đầu hiện)'}
-                      </span>
-                      <span className="neo-badge bg-white text-black text-[9px] py-0 px-1 border border-black/40">
-                        [ Space ]
-                      </span>
-                    </button>
-
-                    {/* Nút 4: Tiến 1 lần */}
-                    <button
-                      type="button"
-                      onClick={handleAdvanceAndPlay}
-                      disabled={stagedUnitIndex >= currentUnitsList.length - 1}
-                      className="neo-btn-sm py-2 px-1.5 bg-[#FF3838] text-white text-xs font-bold flex flex-col items-center justify-center gap-1 hover:bg-red-600 disabled:opacity-40 shadow-[1px_1px_0px_#000]"
-                      title="Tiến sang câu tiếp và phát ngay"
-                    >
-                      <span className="font-black text-xs">⏭️ Tiến 1 lần</span>
-                      <span className="text-[10px] text-red-100 font-normal leading-tight text-center">(Câu tiếp & Phát)</span>
-                      <span className="neo-badge bg-black text-white text-[9px] py-0 px-1 border border-black/40">
-                        [ → / PgDn ]
-                      </span>
-                    </button>
-
-                    {/* Nút 5: Ẩn/Hiện màn hình (Blank) */}
-                    <button
-                      type="button"
-                      onClick={handleToggleBlankOrShow}
-                      className="neo-btn-sm py-2 px-1.5 bg-neutral-100 text-black text-xs font-bold flex flex-col items-center justify-center gap-1 hover:bg-neutral-200 col-span-2 sm:col-span-1 shadow-[1px_1px_0px_#000]"
-                      title="Ẩn / Hiện màn hình trống"
-                    >
-                      <span className="font-black text-xs">
-                        {activeRoom.playbackStatus === 'idle' ? '👁️ Hiện thảo luận' : '⏹️ Ẩn màn hình'}
-                      </span>
-                      <span className="text-[10px] text-neutral-600 font-normal leading-tight text-center">
-                        {activeRoom.playbackStatus === 'idle' ? '(Hiện tự do)' : '(Blank screen)'}
-                      </span>
-                      <span className="neo-badge bg-white text-black text-[9px] py-0 px-1 border border-black/40">
-                        [ B / . ]
-                      </span>
-                    </button>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <button type="button" onClick={handlePreviousAndPlay} disabled={(activeRoom.currentUnit?.index ?? 0) <= 0 || isFullReviewActive}
+                      aria-label={activeRoom.granularity === 'paragraph' ? 'Đoạn trước' : 'Câu trước'} title={unitReviewMode ? 'Review đơn vị trước, không đếm giờ (←)' : 'Đơn vị trước và phát ngay (← / PageUp)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><ChevronLeft size={18} /></button>
+                    <button type="button" onClick={handleReplayCurrent} disabled={isFullReviewActive}
+                      aria-label={activeRoom.granularity === 'paragraph' ? 'Phát lại đoạn này' : 'Phát lại câu này'} title={unitReviewMode ? 'Hiện lại đơn vị này, không đếm giờ (R)' : 'Phát lại (R)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><RotateCcw size={18} /></button>
+                    {!isFullReviewActive && ['playing','paused'].includes(activeRoom.playbackStatus) && roomProgress.phase !== 'blank_finished' && <button type="button"
+                      onClick={activeRoom.playbackStatus === 'paused' ? handleResumeTurn : handlePauseTurn}
+                      aria-label={activeRoom.playbackStatus === 'paused' ? 'Tiếp tục đọc' : 'Tạm dừng đọc'} title={activeRoom.playbackStatus === 'paused' ? 'Tiếp tục đọc (Space)' : 'Tạm dừng đọc (Space)'}
+                      className="neo-btn-sm p-2 bg-[#FFE500]">{activeRoom.playbackStatus === 'paused' ? <Play size={18} /> : <Pause size={18} />}</button>}
+                    <button type="button" onClick={handleAdvanceAndPlay} disabled={(activeRoom.currentUnit?.index ?? 0) >= (activeRoom.currentUnit?.totalUnits ?? 0) - 1 || isFullReviewActive}
+                      aria-label={activeRoom.granularity === 'paragraph' ? 'Đoạn tiếp' : 'Câu tiếp'} title={unitReviewMode ? 'Review đơn vị tiếp, không đếm giờ (→)' : 'Đơn vị tiếp và phát ngay (→ / PageDown)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><ChevronRight size={18} /></button>
                   </div>
-
-                  {/* Hàng 3: Công tắc Tự động chuyển câu + Phím tắt hướng dẫn nhanh */}
-                  <div className="flex flex-wrap items-center justify-between p-2.5 bg-[#FFFDF0] border border-black text-xs font-mono gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
-                      <input
-                        type="checkbox"
-                        checked={autoAdvance}
-                        onChange={e => setAutoAdvance(e.target.checked)}
-                        className="w-4 h-4 accent-black cursor-pointer"
-                      />
-                      <span>⚡ Tự động chuyển câu (Auto-advance)</span>
-                      {autoAdvance ? (
-                        <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold animate-pulse">
-                          BẬT (1.5s nghỉ)
-                        </span>
-                      ) : (
-                        <span className="neo-badge bg-neutral-200 text-neutral-600 text-[9px] py-0 px-1 font-bold">
-                          TẮT
-                        </span>
-                      )}
-                    </label>
-
-                    <span className="text-[10px] text-neutral-500 font-mono">
-                      🎮 Bút trình chiếu USB Clicker & Phím tắt (Mũi tên, Space, B)
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-neutral-500">
+                    <label className="flex items-center gap-1.5"><input type="checkbox" checked={autoAdvance} onChange={e => setAutoAdvance(e.target.checked)} />Tự chuyển câu</label>
+                    <span>{unitReviewMode ? '← Trước · R Hiện lại · → Tiếp · Space/B Ẩn/hiện · không đếm giờ' : '← Trước · R Phát lại · Space Phát/dừng · → Tiếp · B Ẩn/hiện'}</span>
                   </div>
+                </nav>
+
+                <div className="flex items-center justify-between text-xs font-mono">
+                    <button type="button" onClick={handleToggleBlankOrShow}
+                      aria-label={['idle', 'blank_finished'].includes(roomProgress.phase) ? 'Hiện màn hình learner' : 'Ẩn màn hình learner'} title="Ẩn / hiện review trên teacher và learner, không đếm giờ (B / .)"
+                      className="neo-btn-sm p-2 bg-white">{['idle', 'blank_finished'].includes(roomProgress.phase) ? <Eye size={18} /> : <EyeOff size={18} />}</button>
+                  {unitReviewMode && !showFullArticlePreview && <button type="button" onClick={() => { unitReviewModeRef.current = false; setUnitReviewMode(false); }}
+                    aria-label="Trở lại đọc có thời gian" title="Trở lại đọc có thời gian — bấm Replay để bắt đầu" className="neo-btn-sm p-2 bg-white"><Clock size={16} /></button>}
+                  <button type="button" onClick={() => setShowLiveLearnerView(value => !value)} aria-label="Góc nhìn learner"
+                    title="Góc nhìn learner" className="neo-btn-sm px-2 py-1 bg-white"><Monitor size={16} /></button>
                 </div>
-
-                {/* Phía dưới khối chính: Toggle Live Learner View */}
-                <div className="pt-2 border-t border-black/10 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setShowLiveLearnerView(!showLiveLearnerView)}
-                    className="neo-btn-sm px-2.5 py-1 bg-neutral-100 text-black text-xs font-bold flex items-center gap-1.5 hover:bg-neutral-200"
-                  >
-                    <Monitor size={13} />
-                    <span>{showLiveLearnerView ? 'Ẩn Live Learner View' : 'Mở Live Learner View (Góc nhìn học sinh)'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStudioResource(activePresentedResource);
-                      setShowStudioModal(true);
-                    }}
-                    className="text-xs font-mono text-neutral-700 hover:text-black font-bold underline"
-                  >
-                    Sửa Highlights bài này
-                  </button>
-                </div>
+                {isReadingFullscreen ? <div data-testid="fullscreen-learner-view" className="lg:fixed lg:right-5 lg:top-5 lg:w-[40vw] lg:max-h-[calc(100vh-2.5rem)] lg:overflow-y-auto">
+                  <LiveLearnerPreview room={activeRoom} timeline={roomProgress} participantsCount={participants.length} />
+                </div> : showLiveLearnerView && <LiveLearnerView room={activeRoom} participants={participants}
+                  onClose={() => setShowLiveLearnerView(false)} stagedEraseEffect={stagedEraseEffect} stagedDustAngle={stagedDustAngle}
+                  onSelectDustAngle={setStagedDustAngle} onSelectEraseEffect={setStagedEraseEffect} stagedHoldMs={stagedHoldMs} stagedEraseMs={stagedEraseMs} />}
               </div>
 
-              {/* Live Learner View mô phỏng màn hình học sinh khi được bật */}
-              {showLiveLearnerView && (
-                <LiveLearnerView
-                  room={activeRoom}
-                  participants={participants}
-                  onClose={() => setShowLiveLearnerView(false)}
-                  stagedEraseEffect={stagedEraseEffect}
-                  stagedDustAngle={stagedDustAngle}
-                  onSelectDustAngle={setStagedDustAngle}
-                  onSelectEraseEffect={setStagedEraseEffect}
-                  stagedHoldMs={stagedHoldMs}
-                  stagedEraseMs={stagedEraseMs}
-                />
-              )}
             </div>
 
             {/* Right Column: lg:col-span-4 (~30% width) with Icon Tab Navigation (Requirement 4) */}
@@ -1921,7 +1521,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
               {/* Card 1: Cài đặt trình chiếu (Timings & Advanced Engine - Requirements 4, 6, 7) */}
               {(settingsTab === 'timings' || settingsTab === 'all') && (
-                <div className="neo-box-sm bg-white p-3.5 space-y-3">
+                <div data-testid="presentation-settings" className="neo-box-sm bg-white p-3.5 space-y-3">
                   <div className="flex items-center justify-between border-b border-black pb-2">
                     <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
                       <Sliders size={14} className="text-black" />
@@ -1963,335 +1563,24 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     </div>
                   </div>
 
-                  {/* Requirement 6: Cài đặt thời gian riêng biệt cho Câu & Đoạn */}
-                  <div className="border border-black p-2.5 bg-white space-y-2.5">
-                    <div className="flex items-center justify-between border-b border-black/20 pb-1.5">
-                      <span className="text-[11px] font-mono font-black uppercase text-black flex items-center gap-1">
-                        <Clock size={12} />
-                        <span>Thời gian (Hold & Erase):</span>
-                      </span>
-                      <div className="flex border border-black text-[10px] font-mono font-bold">
-                        <button
-                          type="button"
-                          onClick={() => setTimingProfileTab('sentence')}
-                          className={`px-1.5 py-0.5 transition-colors ${
-                            timingProfileTab === 'sentence' ? 'bg-[#FFE500] font-black' : 'bg-white text-neutral-600 hover:text-black'
-                          }`}
-                        >
-                          Cài Câu
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTimingProfileTab('paragraph')}
-                          className={`px-1.5 py-0.5 border-l border-black transition-colors ${
-                            timingProfileTab === 'paragraph' ? 'bg-[#FFE500] font-black' : 'bg-white text-neutral-600 hover:text-black'
-                          }`}
-                        >
-                          Cài Đoạn
-                        </button>
-                      </div>
-                    </div>
-
-                    {timingProfileTab === 'sentence' ? (
-                      <div className="space-y-2">
-                        <div className="text-[10px] font-mono text-neutral-600 flex items-center justify-between">
-                          <span>Đang cài: <b>Thời gian Câu</b></span>
-                          {stagedGranularity === 'sentence' ? (
-                            <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
-                              Đang áp dụng
-                            </span>
-                          ) : (
-                            <span className="text-[9px] text-neutral-400">Sẽ áp dụng khi chọn Câu</span>
-                          )}
-                        </div>
-
-                        {/* Giữ chữ câu */}
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
-                            <span>Giữ chữ câu (Hold):</span>
-                            <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
-                              {(stagedSentenceHoldMs / 1000).toFixed(1)}s
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min={1000}
-                              max={10000}
-                              step={500}
-                              value={stagedSentenceHoldMs}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setStagedSentenceHoldMs(val);
-                                if (stagedGranularity === 'sentence') setStagedHoldMs(val);
-                              }}
-                              className="w-full accent-black cursor-pointer"
-                            />
-                            <input
-                              type="number"
-                              min={1000}
-                              max={10000}
-                              step={500}
-                              value={stagedSentenceHoldMs}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setStagedSentenceHoldMs(val);
-                                if (stagedGranularity === 'sentence') setStagedHoldMs(val);
-                              }}
-                              className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Xóa chữ câu */}
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
-                            <span>Xóa chữ câu (Erase):</span>
-                            <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
-                              {(stagedSentenceEraseMs / 1000).toFixed(1)}s
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min={500}
-                              max={5000}
-                              step={250}
-                              value={stagedSentenceEraseMs}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setStagedSentenceEraseMs(val);
-                                if (stagedGranularity === 'sentence') setStagedEraseMs(val);
-                              }}
-                              className="w-full accent-black cursor-pointer"
-                            />
-                            <input
-                              type="number"
-                              min={500}
-                              max={5000}
-                              step={250}
-                              value={stagedSentenceEraseMs}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setStagedSentenceEraseMs(val);
-                                if (stagedGranularity === 'sentence') setStagedEraseMs(val);
-                              }}
-                              className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="text-[10px] font-mono text-neutral-600 flex items-center justify-between">
-                          <span>Đang cài: <b>Thời gian Đoạn</b></span>
-                          {stagedGranularity === 'paragraph' ? (
-                            <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
-                              Đang áp dụng
-                            </span>
-                          ) : (
-                            <span className="text-[9px] text-neutral-400">Sẽ áp dụng khi chọn Đoạn</span>
-                          )}
-                        </div>
-
-                        {/* Giữ chữ đoạn */}
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
-                            <span>Giữ chữ đoạn (Hold):</span>
-                            <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
-                              {(stagedParagraphHoldMs / 1000).toFixed(1)}s
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min={3000}
-                              max={30000}
-                              step={500}
-                              value={stagedParagraphHoldMs}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setStagedParagraphHoldMs(val);
-                                if (stagedGranularity === 'paragraph') setStagedHoldMs(val);
-                              }}
-                              className="w-full accent-black cursor-pointer"
-                            />
-                            <input
-                              type="number"
-                              min={3000}
-                              max={30000}
-                              step={500}
-                              value={stagedParagraphHoldMs}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setStagedParagraphHoldMs(val);
-                                if (stagedGranularity === 'paragraph') setStagedHoldMs(val);
-                              }}
-                              className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Xóa chữ đoạn */}
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
-                            <span>Xóa chữ đoạn (Erase):</span>
-                            <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
-                              {(stagedParagraphEraseMs / 1000).toFixed(1)}s
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min={1000}
-                              max={8000}
-                              step={250}
-                              value={stagedParagraphEraseMs}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setStagedParagraphEraseMs(val);
-                                if (stagedGranularity === 'paragraph') setStagedEraseMs(val);
-                              }}
-                              className="w-full accent-black cursor-pointer"
-                            />
-                            <input
-                              type="number"
-                              min={1000}
-                              max={8000}
-                              step={250}
-                              value={stagedParagraphEraseMs}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setStagedParagraphEraseMs(val);
-                                if (stagedGranularity === 'paragraph') setStagedEraseMs(val);
-                              }}
-                              className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Requirement 7: Nâng cao - Tính toán độ dài câu/đoạn & Cơ chế gộp câu ngắn */}
-                  <div className="p-2.5 bg-[#FFFDF0] border border-black space-y-2 text-xs font-mono">
-                    <div className="font-bold uppercase text-[11px] text-black flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <Sparkles size={13} className="text-[#00D2FF]" />
-                        <span>Hiệu chỉnh thông minh (Advanced):</span>
-                      </span>
-                      <span className="neo-badge bg-[#00D2FF] text-black text-[9px] py-0 px-1 font-bold">
-                        AI Pacing
-                      </span>
-                    </div>
-
-                    {/* Toggle Dynamic Pacing */}
-                    <label className="flex items-center gap-2 cursor-pointer font-bold select-none text-[11px]">
-                      <input
-                        type="checkbox"
-                        checked={dynamicPacingEnabled}
-                        onChange={e => setDynamicPacingEnabled(e.target.checked)}
-                        className="w-4 h-4 accent-black cursor-pointer"
-                      />
-                      <span>Bù trừ thời gian theo độ dài (Dynamic Pacing)</span>
-                    </label>
-
-                    {dynamicPacingEnabled && (
-                      <div className="pl-6 space-y-1.5 text-[10px]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-neutral-600">Tốc độ đọc mẫu:</span>
-                          <div className="flex gap-1">
-                            {[
-                              { wpm: 120, label: '120 Chậm' },
-                              { wpm: 160, label: '160 Chuẩn' },
-                              { wpm: 200, label: '200 Nhanh' },
-                            ].map(item => (
-                              <button
-                                key={item.wpm}
-                                type="button"
-                                onClick={() => setReadingWpm(item.wpm)}
-                                className={`px-1.5 py-0.5 border text-[10px] font-bold ${
-                                  readingWpm === item.wpm
-                                    ? 'bg-black text-white border-black'
-                                    : 'bg-white text-black border-black/40 hover:border-black'
-                                }`}
-                              >
-                                {item.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        {stagedText && (
-                          <div className="p-1.5 bg-white border border-black/30 text-[10px] text-neutral-800">
-                            Unit #{stagedUnitIndex + 1}: <b>{dynamicHoldInfo.wordCount} từ</b> → Tính toán:{' '}
-                            <b className="font-black text-black">{(dynamicHoldInfo.holdDurationMs / 1000).toFixed(1)}s</b>
-                            {dynamicHoldInfo.isAdjusted && (
-                              <span
-                                className={`ml-1 font-bold ${
-                                  dynamicHoldInfo.adjustedDiffMs > 0 ? 'text-green-700' : 'text-amber-700'
-                                }`}
-                              >
-                                ({dynamicHoldInfo.adjustedDiffMs > 0 ? `+${(dynamicHoldInfo.adjustedDiffMs / 1000).toFixed(1)}s câu dài` : `${(dynamicHoldInfo.adjustedDiffMs / 1000).toFixed(1)}s câu ngắn`})
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Toggle Smart Unit Merging */}
-                    <div className="pt-2 border-t border-black/10">
-                      <label className="flex items-center gap-2 cursor-pointer font-bold select-none text-[11px]">
-                        <input
-                          type="checkbox"
-                          checked={autoMergeShortUnits}
-                          onChange={e => setAutoMergeShortUnits(e.target.checked)}
-                          className="w-4 h-4 accent-black cursor-pointer"
-                        />
-                        <span>Tự gộp câu quá ngắn (&lt; min từ)</span>
-                      </label>
-
-                      {autoMergeShortUnits && (
-                        <div className="pl-6 pt-1 space-y-1 text-[10px]">
-                          <div className="flex items-center justify-between">
-                            <span className="text-neutral-600">Ngưỡng tối thiểu:</span>
-                            <span className="font-bold bg-white px-1 border border-black">{minWordsPerUnit} từ</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={3}
-                            max={8}
-                            step={1}
-                            value={minWordsPerUnit}
-                            onChange={e => setMinWordsPerUnit(Number(e.target.value))}
-                            className="w-full accent-black cursor-pointer"
-                          />
-                          <p className="text-neutral-500 italic text-[9px] leading-tight">
-                            Ví dụ: &quot;Stay hungry.&quot; + &quot;Stay foolish.&quot; sẽ gộp thành 1 hiển thị mượt mà.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Mode Review Toàn Bài (Requirement 6) */}
-                  <div className="p-2.5 border border-black bg-[#FFFDF0] flex items-center justify-between text-xs font-mono">
-                    <div>
-                      <div className="font-bold text-black text-[11px]">Xem lại toàn bài (Full Review):</div>
-                      <div className="text-[10px] text-neutral-600">Chiếu toàn văn không đếm ngược</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleToggleFullReview}
-                      className={`neo-btn-sm px-2.5 py-1 text-xs font-bold ${
-                        isFullReviewActive
-                          ? 'bg-[#FF3838] text-white hover:bg-red-600'
-                          : 'bg-[#FFE500] text-black hover:bg-yellow-300'
-                      }`}
-                    >
-                      {isFullReviewActive ? 'Thoát Review' : 'Bật Review'}
-                    </button>
-                  </div>
+                  <details open className="text-xs font-mono space-y-2">
+                    <summary className="cursor-pointer font-bold">Thời gian & âm thanh</summary>
+                    <TeacherReadingSettings mode={stagedTimingMode} onMode={setStagedTimingMode}
+                      rate={stagedWordsPerSecond} onRate={setStagedWordsPerSecond}
+                      schedule={stagedEraseSchedule} onSchedule={setStagedEraseSchedule} text={stagedText}
+                      profiles={{ sentence: { holdMs: stagedSentenceHoldMs, eraseMs: stagedSentenceEraseMs }, paragraph: { holdMs: stagedParagraphHoldMs, eraseMs: stagedParagraphEraseMs } }}
+                      onProfile={(granularity, field, value) => {
+                        if (granularity === 'sentence') { if (field === 'holdMs') setStagedSentenceHoldMs(value); else setStagedSentenceEraseMs(value); }
+                        else { if (field === 'holdMs') setStagedParagraphHoldMs(value); else setStagedParagraphEraseMs(value); }
+                        if (granularity === stagedGranularity) { if (field === 'holdMs') setStagedHoldMs(value); else setStagedEraseMs(value); }
+                      }} sounds={teacherAudio.sounds} onSound={teacherAudio.toggleSound} soundOptions={teacherAudio.soundOptions}
+                      onSelectSound={teacherAudio.selectSound} onPreviewSound={teacherAudio.previewSound} />
+                  </details>
+                  <label className="flex items-center gap-2 text-xs font-mono"><input type="checkbox" checked={autoMergeShortUnits}
+                    onChange={e => setAutoMergeShortUnits(e.target.checked)} />Gộp câu ngắn</label>
+                  {autoMergeShortUnits && <label className="flex items-center justify-between gap-2 text-xs font-mono">Tối thiểu số từ
+                    <input type="number" min={3} max={8} value={minWordsPerUnit} onChange={e => setMinWordsPerUnit(Number(e.target.value))}
+                      className="neo-input w-16 text-xs" /></label>}
 
                   {/* Hiệu ứng xóa chữ */}
                   <div>
@@ -2320,20 +1609,6 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     )}
                   </div>
 
-                  {/* Highlights mini toggle */}
-                  <div className="pt-2 border-t border-black/10 flex items-center justify-between text-xs font-mono">
-                    <span className="text-[11px] font-bold uppercase text-neutral-700">Hiển thị Highlights:</span>
-                    <button
-                      type="button"
-                      onClick={() => setStagedHighlight(!stagedHighlight)}
-                      className={`py-1 px-3 border border-black text-[10px] font-bold uppercase flex items-center gap-1.5 ${
-                        stagedHighlight ? 'bg-[#4ADE80] text-black' : 'bg-neutral-200 text-neutral-600'
-                      }`}
-                    >
-                      {stagedHighlight ? <Check size={12} /> : <EyeOff size={12} />}
-                      <span>{stagedHighlight ? 'Bật Highlights' : 'Tắt'}</span>
-                    </button>
-                  </div>
                 </div>
               )}
 

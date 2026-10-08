@@ -9,6 +9,7 @@ interface Props {
   contentKey: string;
   className?: string;
   children: ReactNode;
+  inline?: boolean;
 }
 interface Point { x: number; y: number; color: string; r: number; r2: number }
 interface Line { left: number; right: number; top: number; bottom: number }
@@ -17,13 +18,13 @@ const PAD = 70;
 const isParticleEffect = (effect: EraseEffect) => ['eraser', 'dust', 'sparkle'].includes(effect);
 
 // DOM remains the real reading content. Canvas is only a decorative overlay, never a second clock.
-export function EraseTextEffect({ effect, timeline, dustAngle = DEFAULT_DUST_ANGLE, contentKey, className = '', children }: Props) {
+export function EraseTextEffect({ effect, timeline, dustAngle = DEFAULT_DUST_ANGLE, contentKey, className = '', children, inline = false }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [layout, setLayout] = useState<Layout | null>(null);
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const p = getEraseProgress(timeline);
-  const particlesEnabled = isParticleEffect(effect) && !reduced;
+  const particlesEnabled = isParticleEffect(effect) && !reduced && (!inline || (p > 0 && p < 1));
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const change = () => setReduced(media.matches);
@@ -168,8 +169,9 @@ export function EraseTextEffect({ effect, timeline, dustAngle = DEFAULT_DUST_ANG
     else if (effect === 'fade') style = { opacity: 1 - p, filter: `blur(${p * 3.5}px)` };
     else { const mask = `linear-gradient(to right,transparent ${p * 100}%,black ${Math.min(100, p * 100 + 12)}%)`; style = { maskImage: mask, WebkitMaskImage: mask, opacity: Math.max(.15, 1 - p * .8) }; }
   }
-  return <div className={`relative ${className}`} data-erase-effect={effect} data-erase-progress={p.toFixed(3)}>
-    <div ref={contentRef} style={style}>{children}</div>
-    {particlesEnabled && layout && <canvas ref={canvasRef} aria-hidden="true" className="absolute pointer-events-none" style={{ left: -PAD, top: -PAD, width: layout.width + PAD * 2, height: layout.height + PAD * 2 }} />}
-  </div>;
+  const Wrapper = inline ? 'span' : 'div';
+  return <Wrapper className={`relative ${className}`} style={{ isolation: 'isolate', ...(inline ? { display: 'inline-block', verticalAlign: 'baseline', zIndex: particlesEnabled && p > 0 && p < 1 ? 2 : 0 } : {}) }} data-erase-effect={effect} data-erase-progress={p.toFixed(3)}>
+    <Wrapper ref={contentRef} style={{ ...style, position: 'relative', zIndex: 0 }}>{children}</Wrapper>
+    {particlesEnabled && layout && <canvas ref={canvasRef} aria-hidden="true" className="absolute pointer-events-none" style={{ zIndex: 20, left: -PAD, top: -PAD, width: layout.width + PAD * 2, height: layout.height + PAD * 2 }} />}
+  </Wrapper>;
 }

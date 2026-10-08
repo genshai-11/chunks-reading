@@ -7,51 +7,12 @@ import React, { useState, useEffect } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, testConnection, signInTeacherWithGoogle } from './firebase';
 import { Navbar } from './components/Navbar';
+import { parseAppRoute, navigateApp, teacherTabUrl } from './utils/appRoutes';
 import { TeacherDashboard } from './components/TeacherDashboard';
 import { StudentView } from './components/StudentView';
 import { BookOpen, ShieldCheck, Zap, Layers, Sparkles, Check } from 'lucide-react';
 
-function parseRouteFromUrl(): { view: 'teacher' | 'student'; roomCode: string } {
-  if (typeof window === 'undefined') return { view: 'teacher', roomCode: '' };
-
-  const pathname = window.location.pathname.toLowerCase();
-  const searchParams = new URLSearchParams(window.location.search);
-  let roomCode = (searchParams.get('room') || searchParams.get('roomId') || searchParams.get('join') || '').trim().toUpperCase();
-
-  // Check path: /student/:roomId or /student or /join/:roomId
-  if (pathname.startsWith('/student') || pathname.startsWith('/join') || pathname.startsWith('/learner')) {
-    const parts = pathname.split('/').filter(Boolean);
-    if (parts.length >= 2 && !roomCode) {
-      roomCode = decodeURIComponent(parts[1]).trim().toUpperCase();
-    }
-    return { view: 'student', roomCode };
-  }
-
-  // Also check hash fragment e.g. /#/?room=... or /#room=... or /#/student?room=...
-  if (window.location.hash) {
-    const hash = window.location.hash;
-    const isStudentHash = hash.toLowerCase().includes('student') || hash.toLowerCase().includes('learner');
-    const qIdx = hash.indexOf('?');
-    if (qIdx !== -1) {
-      const hashParams = new URLSearchParams(hash.substring(qIdx));
-      const hashRoom = hashParams.get('room') || hashParams.get('roomId') || hashParams.get('join');
-      if (hashRoom) roomCode = hashRoom.trim().toUpperCase();
-    } else {
-      const match = hash.match(/[#&](?:room|join)=([^&]+)/i);
-      if (match && match[1]) roomCode = decodeURIComponent(match[1]).trim().toUpperCase();
-    }
-    if (isStudentHash || roomCode) {
-      return { view: 'student', roomCode };
-    }
-  }
-
-  // Query parameter ?room= indicates direct learner intent
-  if (roomCode) {
-    return { view: 'student', roomCode };
-  }
-
-  return { view: 'teacher', roomCode: '' };
-}
+function parseRouteFromUrl() { return parseAppRoute(typeof window === 'undefined' ? {pathname:'/'} : window.location); }
 
 export default function App() {
   const initialRoute = parseRouteFromUrl();
@@ -79,31 +40,16 @@ export default function App() {
     const handlePopState = () => {
       const route = parseRouteFromUrl();
       setCurrentView(route.view);
-      if (route.roomCode) setInitialRoomCode(route.roomCode);
+      setInitialRoomCode(route.roomCode);
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    for (const event of ['popstate', 'hashchange', 'app-route-change']) window.addEventListener(event, handlePopState);
+    return () => { for (const event of ['popstate', 'hashchange', 'app-route-change']) window.removeEventListener(event, handlePopState); };
   }, []);
 
   const handleSwitchView = (view: 'teacher' | 'student', roomCode?: string) => {
-    setCurrentView(view);
     const code = roomCode !== undefined ? roomCode : initialRoomCode;
-    if (roomCode) setInitialRoomCode(roomCode);
-
-    if (typeof window !== 'undefined') {
-      const targetUrl = view === 'student'
-        ? (code ? `/student?room=${code}` : '/student')
-        : '/';
-      const currentUrl = window.location.pathname + window.location.search;
-      if (currentUrl !== targetUrl) {
-        try {
-          window.history.pushState({ view, roomCode: code }, '', targetUrl);
-        } catch {
-          // Non-blocking fallback
-        }
-      }
-    }
+    navigateApp(view === 'student' ? (code ? `/student?room=${encodeURIComponent(code)}` : '/student') : teacherTabUrl('live'));
   };
 
   const handleOpenLearnerView = (roomCode?: string) => {

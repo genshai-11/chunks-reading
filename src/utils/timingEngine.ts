@@ -4,6 +4,7 @@
  */
 
 import { ClassroomRoom, CalculatedTimeline, TimingPolicy } from '../types';
+import { calculateAutoReadingMs, getWordsPerSecond, getSequentialTiming } from './readingTiming';
 
 /**
  * Calculates effective timing values based on policy.
@@ -100,8 +101,9 @@ export function calculateDynamicHoldDuration(options: DynamicPacingOptions): {
 }
 
 /**
- * Authoritatively compute the current playback phase, remaining milliseconds, and erase progress (0 to 1).
- * Works purely from server timestamps and elapsed times, so late joiners and background tabs sync instantly.
+ * Derive playback phase from the room's start timestamp and stored paused elapsed time.
+ * Live callers supply calibrated server time; private rehearsal supplies monotonic elapsed time.
+ * The default wall clock remains for backward-compatible pure callers, not a live sync guarantee.
  */
 export function calculateRoomTimeline(
   room: ClassroomRoom,
@@ -109,12 +111,27 @@ export function calculateRoomTimeline(
 ): CalculatedTimeline {
   const { timingPolicy, holdDurationMs, eraseDurationMs, totalWindowMs, playbackStatus, serverStartTime, pausedElapsedMs, isFullReview } = room;
 
-  const { effectiveHoldMs, effectiveEraseMs, totalDurationMs } = getEffectiveDurations(
-    timingPolicy,
-    holdDurationMs,
-    eraseDurationMs,
-    totalWindowMs
-  );
+  let durations = getEffectiveDurations(timingPolicy, holdDurationMs, eraseDurationMs, totalWindowMs);
+  if (room.timingMode === 'auto') {
+    const readingMs = calculateAutoReadingMs(room.currentUnit?.text || '', getWordsPerSecond(room.wordsPerSecond));
+    durations = { effectiveHoldMs: readingMs, effectiveEraseMs: 1000, totalDurationMs: readingMs + 1000 };
+  }
+  const sequential = room.eraseSchedule === 'word_groups';
+  if (sequential) {
+    const sequentialTiming = getSequentialTiming(room, room.currentUnit?.text || '');
+    const total = sequentialTiming.totalMs;
+    const intro = Math.min(total, Math.max(sequentialTiming.lagMs, sequentialTiming.wordMs));
+    durations = { effectiveHoldMs: intro, effectiveEraseMs: total - intro, totalDurationMs: total };
+  }
+  const { effectiveHoldMs, effectiveEraseMs, totalDurationMs } = durations;
+
+  // Hide/End always take precedence over full review.
+  if (playbackStatus === 'idle' || playbackStatus === 'ended' || room.status === 'ended') {
+    const ended = playbackStatus === 'ended' || room.status === 'ended';
+    return { phase: ended ? 'ended' : 'idle', progress: ended ? 1 : 0,
+      remainingMs: ended ? 0 : totalDurationMs, totalDurationMs, effectiveHoldMs, effectiveEraseMs,
+      elapsedMs: ended ? totalDurationMs : 0 };
+  }
 
   // Full Text Review mode has no countdown: text remains shown until teacher changes state
   if (isFullReview || playbackStatus === 'manual_show') {
@@ -129,36 +146,12 @@ export function calculateRoomTimeline(
     };
   }
 
-  if (playbackStatus === 'idle') {
-    return {
-      phase: 'idle',
-      progress: 0,
-      remainingMs: totalDurationMs,
-      totalDurationMs,
-      effectiveHoldMs,
-      effectiveEraseMs,
-      elapsedMs: 0,
-    };
-  }
-
-  if (playbackStatus === 'ended') {
-    return {
-      phase: 'ended',
-      progress: 1,
-      remainingMs: 0,
-      totalDurationMs,
-      effectiveHoldMs,
-      effectiveEraseMs,
-      elapsedMs: totalDurationMs,
-    };
-  }
-
   // Calculate elapsed milliseconds
   let elapsedMs = 0;
   if (playbackStatus === 'paused') {
     elapsedMs = pausedElapsedMs || 0;
   } else if (playbackStatus === 'playing') {
-    if (serverStartTime) {
+    if (serverStartTime !== null) {
       elapsedMs = Math.max(0, currentClientTime - serverStartTime);
     } else {
       elapsedMs = pausedElapsedMs || 0;

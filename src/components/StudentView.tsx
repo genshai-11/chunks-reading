@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { EraseTextEffect } from './EraseTextEffect';
+import { ReadingUnitText } from './ReadingUnitText';
+import { ReadingCountdown } from './ReadingCountdown';
 import React, { useState, useEffect } from 'react';
 import {
   ClassroomRoom,
@@ -18,8 +19,9 @@ import {
   registerParticipant,
   sendParticipantHeartbeat,
 } from '../services/roomService';
-import { calculateRoomTimeline } from '../utils/timingEngine';
-import { buildRenderSlices } from '../utils/textSegmentation';
+import { getSyncedRoomTimeline } from '../services/roomClock';
+import { useRoomClock } from './useRoomClock';
+
 import {
   BookOpen,
   Users,
@@ -71,7 +73,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
   const [activeTooltip, setActiveTooltip] = useState<ApprovedSpan | null>(null);
 
   // Authoritative room erase effect (configured solely by Teacher)
-  const effectiveEraseEffect = room?.eraseEffect || 'vaporize';
+
 
   // Authoritative timeline
   const [timeline, setTimeline] = useState<CalculatedTimeline>({
@@ -213,14 +215,15 @@ export const StudentView: React.FC<StudentViewProps> = ({
     return () => clearInterval(interval);
   }, [activeRoomId, isJoined, participantId, isRemovedByTeacher]);
 
+  const clockStatus = useRoomClock(room?.id);
+
   // High-frequency timeline ticker
   useEffect(() => {
     if (!room) return;
 
     let animId: number;
     const tick = () => {
-      const now = Date.now();
-      const calculated = calculateRoomTimeline(room, now);
+      const calculated = getSyncedRoomTimeline(room);
       setTimeline(calculated);
       animId = requestAnimationFrame(tick);
     };
@@ -228,6 +231,10 @@ export const StudentView: React.FC<StudentViewProps> = ({
     animId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animId);
   }, [room]);
+
+  useEffect(() => {
+    if (['idle', 'ended', 'blank_finished'].includes(timeline.phase) || room?.eraseSchedule === 'word_groups') setActiveTooltip(null);
+  }, [timeline.phase, timeline.elapsedMs, room?.eraseSchedule]);
 
   // Removed by teacher state
   if (isRemovedByTeacher) {
@@ -283,10 +290,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
               <div className="font-bold text-sm text-black truncate">
                 {roomPreview.resourceTitle || 'English Reading Lesson'}
               </div>
-              <div className="text-xs font-mono text-neutral-600 flex items-center gap-1">
-                <GraduationCap size={13} className="text-black" />
-                <span>Instructor: <b>{roomPreview.teacherName || 'Teacher'}</b></span>
-              </div>
+
             </div>
           )}
 
@@ -377,11 +381,11 @@ export const StudentView: React.FC<StudentViewProps> = ({
   // Active Classroom Screen
   const currentUnit = room?.currentUnit;
   const isRoomEnded = room?.status === 'ended';
-  const isFullReview = Boolean(room?.isFullReview || currentUnit?.isFullReview);
+  const isFullReview = timeline.phase === 'manual_show' && Boolean(room?.isFullReview || currentUnit?.isFullReview);
 
   const approvedSpans =
     room?.highlightEnabled && currentUnit?.annotations ? currentUnit.annotations : [];
-  const slices = currentUnit ? buildRenderSlices(currentUnit.text, approvedSpans) : [];
+
 
   const isTextVisible =
     isFullReview ||
@@ -389,16 +393,6 @@ export const StudentView: React.FC<StudentViewProps> = ({
     timeline.phase === 'erase' ||
     timeline.phase === 'paused' ||
     timeline.phase === 'manual_show';
-
-  // Progress Bar Percent for Erase / Hold
-  let progressPercent = 0;
-  if (!isFullReview) {
-    if (timeline.phase === 'hold') {
-      progressPercent = Math.min(100, (timeline.elapsedMs / timeline.effectiveHoldMs) * 100);
-    } else if (timeline.phase === 'erase') {
-      progressPercent = Math.min(100, timeline.progress * 100);
-    }
-  }
 
   // 1-click share link handler (Dedicated student endpoint)
   const handleCopyShareLink = () => {
@@ -425,7 +419,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
             {activeRoomId}
           </span>
           <span className="text-[11px] sm:text-xs font-mono font-bold text-neutral-800 truncate">
-            {room?.teacherName ? `Instructor: ${room.teacherName}` : 'Live Classroom'}
+            Live Classroom
           </span>
         </div>
 
@@ -540,17 +534,8 @@ export const StudentView: React.FC<StudentViewProps> = ({
           )}
         </div>
 
-        {/* Minimal Timer Countdown Bar (During reading & erase) */}
-        {!isFullReview && (timeline.phase === 'hold' || timeline.phase === 'erase') && (
-          <div className="w-full h-1 bg-neutral-200 border-b border-black/20 -mt-2 mb-3 overflow-hidden">
-            <div
-              style={{ width: `${progressPercent}%` }}
-              className={`h-full transition-all duration-75 ${
-                timeline.phase === 'erase' ? 'bg-[#FF3838]' : 'bg-[#4ADE80]'
-              }`}
-            ></div>
-          </div>
-        )}
+        {clockStatus.failed && <p role="status" className="text-xs text-center text-red-700">Clock sync unavailable. Check your connection.</p>}
+        {!isFullReview && <ReadingCountdown timeline={timeline} />}
 
         {/* Reading Text Center Canvas */}
         <div className="flex-1 flex items-center justify-center py-4 sm:py-8">
@@ -567,56 +552,13 @@ export const StudentView: React.FC<StudentViewProps> = ({
                 </span>
               </div>
 
-              <div className="font-reading text-lg sm:text-xl leading-relaxed text-[#111111] space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-                {currentUnit.text.split(/\n\s*\n/).map((para, pIdx) => {
-                  const paraSlices = buildRenderSlices(para, approvedSpans);
-                  return (
-                    <p key={pIdx} className="leading-relaxed">
-                      {paraSlices.map((slice, sIdx) =>
-                        slice.isHighlight && slice.annotation ? (
-                          <mark
-                            key={sIdx}
-                            onClick={() => setActiveTooltip(slice.annotation!)}
-                            className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block cursor-pointer shadow-[1px_1px_0px_#000] active:scale-95 transition-transform"
-                            title="Tap to see definition"
-                          >
-                            {slice.text}
-                          </mark>
-                        ) : (
-                          <span key={sIdx}>{slice.text}</span>
-                        )
-                      )}
-                    </p>
-                  );
-                })}
-              </div>
+              <ReadingUnitText room={room!} timeline={timeline} onAnnotationClick={setActiveTooltip}
+                className="font-reading text-lg sm:text-xl leading-relaxed text-[#111111] max-h-[60vh] overflow-y-auto pr-1" />
             </div>
           ) : isTextVisible && currentUnit?.text ? (
             /* Paced Reading Mode with Erase Text Effect */
-            <EraseTextEffect
-              effect={effectiveEraseEffect}
-              timeline={timeline}
-              dustAngle={room?.dustAngle}
-              contentKey={JSON.stringify([currentUnit.text, approvedSpans])}
-              className="w-full text-center max-w-2xl select-none px-1"
-            >
-              <p className="font-reading text-xl sm:text-2xl md:text-3xl font-medium leading-relaxed sm:leading-loose text-[#111111] tracking-wide">
-                {slices.map((slice, idx) =>
-                  slice.isHighlight && slice.annotation ? (
-                    <mark
-                      key={idx}
-                      onClick={() => setActiveTooltip(slice.annotation!)}
-                      className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block cursor-pointer shadow-[1px_1px_0px_#000] active:scale-95 transition-transform"
-                      title="Tap to see definition"
-                    >
-                      {slice.text}
-                    </mark>
-                  ) : (
-                    <span key={idx}>{slice.text}</span>
-                  )
-                )}
-              </p>
-            </EraseTextEffect>
+            <ReadingUnitText room={room!} timeline={timeline} onAnnotationClick={setActiveTooltip}
+              className="w-full text-center max-w-2xl select-none px-1 font-reading text-xl sm:text-2xl md:text-3xl font-medium leading-relaxed sm:leading-loose text-[#111111] tracking-wide" />
           ) : (
             /* Blank Paper Waiting State */
             <div className="text-center py-6 space-y-2">

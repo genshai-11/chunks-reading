@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { EraseTextEffect } from './EraseTextEffect';
+import { ReadingUnitText } from './ReadingUnitText';
+import { ReadingCountdown } from './ReadingCountdown';
 import React, { useState } from 'react';
 import { ClassroomRoom, CalculatedTimeline, ApprovedSpan } from '../types';
-import { buildRenderSlices } from '../utils/textSegmentation';
+
 import { Monitor, Smartphone, Sparkles, Clock, Users, ArrowRight } from 'lucide-react';
 
 interface LiveLearnerPreviewProps {
@@ -26,7 +27,7 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
   const currentUnit = room.currentUnit;
   const approvedSpans =
     room.highlightEnabled && currentUnit?.annotations ? currentUnit.annotations : [];
-  const slices = currentUnit ? buildRenderSlices(currentUnit.text, approvedSpans) : [];
+
 
   const isTextVisible =
     timeline.phase === 'hold' ||
@@ -35,13 +36,6 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
     timeline.phase === 'manual_show';
 
   const selectedEffect = room.eraseEffect || 'vaporize';
-
-  let progressPercent = 0;
-  if (timeline.phase === 'hold') {
-    progressPercent = Math.min(100, (timeline.elapsedMs / timeline.effectiveHoldMs) * 100);
-  } else if (timeline.phase === 'erase') {
-    progressPercent = Math.min(100, timeline.progress * 100);
-  }
 
   return (
     <div className="neo-box-sm p-4 bg-white space-y-3">
@@ -97,9 +91,7 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
                 <span className="font-bold text-black">{room.id}</span>
-                <span className="text-neutral-500 truncate max-w-[120px]">
-                  {room.teacherName}
-                </span>
+
               </div>
               <div className="flex items-center gap-1 text-neutral-600">
                 <Users size={10} />
@@ -149,51 +141,13 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
                 </div>
               </div>
 
-              {/* Progress Line */}
-              {(timeline.phase === 'hold' || timeline.phase === 'erase') && (
-                <div className="w-full h-1 bg-neutral-200 border-b border-black/20 -mt-1 mb-3 overflow-hidden">
-                  <div
-                    style={{ width: `${progressPercent}%` }}
-                    className={`h-full transition-all duration-75 ${
-                      timeline.phase === 'erase' ? 'bg-[#FF3838]' : 'bg-[#4ADE80]'
-                    }`}
-                  ></div>
-                </div>
-              )}
+              <ReadingCountdown timeline={timeline} />
 
               {/* Text Canvas Area */}
               <div className="flex-1 flex items-center justify-center py-4">
                 {isTextVisible && currentUnit?.text ? (
-                  <EraseTextEffect
-                  effect={room.eraseEffect || 'vaporize'}
-                  timeline={timeline}
-                  dustAngle={room.dustAngle}
-                  contentKey={JSON.stringify([currentUnit.text, approvedSpans])}
-                  className="w-full text-center"
-                >
-                    <p
-                      className={`font-reading leading-relaxed text-[#111111] font-normal ${
-                        deviceMode === 'mobile'
-                          ? 'text-base sm:text-lg'
-                          : 'text-lg sm:text-2xl'
-                      }`}
-                    >
-                      {slices.map((slice, idx) =>
-                        slice.isHighlight && slice.annotation ? (
-                          <mark
-                            key={idx}
-                            onClick={() => setActiveTooltip(slice.annotation!)}
-                            className="bg-[#FFE500] text-black font-semibold px-1 py-0.2 border-b-2 border-black inline-block cursor-pointer shadow-[1px_1px_0px_#000] mr-1"
-                            title={slice.annotation.meaning}
-                          >
-                            {slice.text}
-                          </mark>
-                        ) : (
-                          <span key={idx}>{slice.text}</span>
-                        )
-                      )}
-                    </p>
-                  </EraseTextEffect>
+                  <ReadingUnitText room={room} timeline={timeline} onAnnotationClick={setActiveTooltip}
+                    className={`w-full text-center font-reading leading-relaxed text-[#111111] font-normal ${deviceMode === 'mobile' ? 'text-base sm:text-lg' : 'text-lg sm:text-2xl'}`} />
                 ) : (
                   <div className="text-center py-4 space-y-1">
                     <Clock size={16} className="mx-auto text-neutral-400 animate-pulse" />

@@ -14,6 +14,8 @@ export type AnnotationStatus = 'pending' | 'approved' | 'rejected';
 export type Granularity = 'sentence' | 'paragraph';
 
 export type TimingPolicy = 'hold_then_erase' | 'erase_within_window';
+export type TimingMode = 'fixed' | 'auto';
+export type EraseSchedule = 'after_reading' | 'word_groups';
 
 export type EraseEffect = 'vaporize' | 'dissolve' | 'wipe' | 'fade' | 'eraser' | 'dust' | 'sparkle';
 
@@ -93,7 +95,11 @@ export interface ClassroomRoom {
   paragraphEraseMs?: number;
   // Full text review mode (show entire text without auto-hide timer)
   isFullReview?: boolean;
-  // Dynamic pacing and auto-merge settings
+  // Staged reading controls become authoritative only after Apply.
+  timingMode?: TimingMode;
+  wordsPerSecond?: number;
+  eraseSchedule?: EraseSchedule;
+  // Legacy pacing and auto-merge settings
   dynamicPacingEnabled?: boolean;
   readingWpm?: number;
   autoMergeShortUnits?: boolean;

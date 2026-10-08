@@ -5,11 +5,13 @@
 
 import { DustDirectionControl } from './DustDirectionControl';
 import { ERASE_EFFECT_OPTIONS, DEFAULT_DUST_ANGLE } from '../utils/eraseEffects';
-import { EraseTextEffect } from './EraseTextEffect';
+import { ReadingUnitText } from './ReadingUnitText';
+import { ReadingCountdown } from './ReadingCountdown';
 import React, { useState, useEffect, useRef } from 'react';
 import { ClassroomRoom, CalculatedTimeline, ApprovedSpan, RoomParticipant, EraseEffect } from '../types';
-import { calculateRoomTimeline } from '../utils/timingEngine';
-import { buildRenderSlices } from '../utils/textSegmentation';
+import { getSyncedRoomTimeline } from '../services/roomClock';
+import { useRoomClock } from './useRoomClock';
+
 import {
   Smartphone,
   Monitor,
@@ -134,6 +136,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [isSimulating, stagedHoldMs, stagedEraseMs]);
 
+  useRoomClock(room.id);
   // Live timeline synced with classroom room when NOT simulating
   const [liveTimeline, setLiveTimeline] = useState<CalculatedTimeline>({
     phase: 'idle',
@@ -150,7 +153,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
 
     let animId: number;
     const tick = () => {
-      const calculated = calculateRoomTimeline(room, Date.now());
+      const calculated = getSyncedRoomTimeline(room);
       setLiveTimeline(calculated);
       animId = requestAnimationFrame(tick);
     };
@@ -165,23 +168,13 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
   const currentUnit = room.currentUnit;
   const approvedSpans =
     room.highlightEnabled && currentUnit?.annotations ? currentUnit.annotations : [];
-  const slices = currentUnit ? buildRenderSlices(currentUnit.text, approvedSpans) : [];
+
 
   const isTextVisible =
     activeTimeline.phase === 'hold' ||
     activeTimeline.phase === 'erase' ||
     activeTimeline.phase === 'paused' ||
     activeTimeline.phase === 'manual_show';
-
-  // Progress Bar percent
-  let progressPercent = 0;
-  if (!room.isFullReview) {
-    if (activeTimeline.phase === 'hold') {
-      progressPercent = Math.min(100, (activeTimeline.elapsedMs / activeTimeline.effectiveHoldMs) * 100);
-    } else if (activeTimeline.phase === 'erase') {
-      progressPercent = Math.min(100, activeTimeline.progress * 100);
-    }
-  }
 
   const shareUrl = `${window.location.origin}/student?room=${room.id}`;
 
@@ -213,7 +206,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
     setIsSimulating(true);
   };
 
-  const isFullReview = Boolean(room.isFullReview || currentUnit?.isFullReview);
+  const isFullReview = activeTimeline.phase === 'manual_show' && Boolean(room.isFullReview || currentUnit?.isFullReview);
   const unitLabel = currentUnit?.granularity === 'paragraph' ? 'Paragraph' : 'Sentence';
 
   return (
@@ -409,17 +402,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
 
           {/* Reading Paper Canvas (Exact replica of learner screen) */}
           <div className="bg-paper-reading p-4 sm:p-6 min-h-[180px] sm:min-h-[240px] flex flex-col justify-between border border-black relative overflow-hidden select-none">
-            {/* Progress bar line */}
-            {(activeTimeline.phase === 'hold' || activeTimeline.phase === 'erase') && (
-              <div className="w-full h-1 bg-black/10 absolute top-0 left-0">
-                <div
-                  style={{ width: `${progressPercent}%` }}
-                  className={`h-full transition-all duration-75 ${
-                    activeTimeline.phase === 'erase' ? 'bg-[#FF3838]' : 'bg-[#4ADE80]'
-                  }`}
-                ></div>
-              </div>
-            )}
+            <ReadingCountdown timeline={activeTimeline} />
 
             {/* Chunk counter tag */}
             <div className="flex items-center justify-between text-[9px] font-mono text-neutral-500 mb-2">
@@ -438,52 +421,12 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
                   <div className="text-[10px] font-mono font-bold text-neutral-600 bg-[#FFFDF0] p-1 border border-black/30">
                     📖 Full Text Mode (Learners can read entire passage)
                   </div>
-                  <div className="font-reading text-base leading-relaxed text-[#111111] space-y-2">
-                    {currentUnit.text.split(/\n\s*\n/).map((p, pIdx) => (
-                      <p key={pIdx}>
-                        {buildRenderSlices(p, approvedSpans).map((slice, sIdx) =>
-                          slice.isHighlight && slice.annotation ? (
-                            <mark
-                              key={sIdx}
-                              onClick={() => setActiveTooltip(slice.annotation!)}
-                              className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block cursor-pointer shadow-[1px_1px_0px_#000]"
-                              title="Tap to view definition"
-                            >
-                              {slice.text}
-                            </mark>
-                          ) : (
-                            <span key={sIdx}>{slice.text}</span>
-                          )
-                        )}
-                      </p>
-                    ))}
-                  </div>
-                </div>
+                  <ReadingUnitText room={room} timeline={activeTimeline} onAnnotationClick={setActiveTooltip}
+                    className="font-reading text-base leading-relaxed text-[#111111]" />                </div>
               ) : isTextVisible && currentUnit?.text ? (
-                <EraseTextEffect
-                  effect={isSimulating ? activeEffect : (room.eraseEffect || 'vaporize')}
-                  timeline={activeTimeline}
-                  dustAngle={isSimulating ? stagedDustAngle : room.dustAngle}
-                  contentKey={JSON.stringify([currentUnit.text, approvedSpans])}
-                  className="w-full text-center max-w-xl"
-                >
-                  <p className={`font-reading ${viewMode === 'mobile' ? 'text-lg leading-relaxed' : 'text-xl sm:text-2xl leading-relaxed'} text-[#111111] font-normal`}>
-                    {slices.map((slice, idx) =>
-                      slice.isHighlight && slice.annotation ? (
-                        <mark
-                          key={idx}
-                          onClick={() => setActiveTooltip(slice.annotation!)}
-                          className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block cursor-pointer shadow-[1px_1px_0px_#000] hover:scale-105 transition-transform"
-                          title="Tap to view definition"
-                        >
-                          {slice.text}
-                        </mark>
-                      ) : (
-                        <span key={idx}>{slice.text}</span>
-                      )
-                    )}
-                  </p>
-                </EraseTextEffect>
+                <ReadingUnitText room={isSimulating ? { ...room, eraseEffect: activeEffect, dustAngle: stagedDustAngle, eraseSchedule: 'after_reading' } : room}
+                  timeline={activeTimeline} onAnnotationClick={setActiveTooltip}
+                  className={`w-full text-center max-w-xl font-reading ${viewMode === 'mobile' ? 'text-lg leading-relaxed' : 'text-xl sm:text-2xl leading-relaxed'} text-[#111111] font-normal`} />
               ) : (
                 <div className="text-center py-4 space-y-1.5 text-neutral-400 font-mono">
                   <Clock size={16} className="mx-auto animate-pulse" />

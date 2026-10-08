@@ -54,111 +54,54 @@ export interface RenderSlice {
   annotation?: ApprovedSpan;
 }
 
-/**
- * Slices a chunk of text into normal parts and highlight parts according to exact approved offsets.
- * Automatically reconciles and self-heals any shifted offsets to match the actual target phrase.
- * Guarantees NO regex injection, no unescaped HTML, and respects punctuation.
- */
+function normalizePhrase(value: string): string {
+  return value.trim().replace(/\s+/gu, ' ').toLowerCase();
+}
+function atWordBoundaries(text: string, start: number, end: number): boolean {
+  const word = /[\p{L}\p{N}\p{M}'’]/u;
+  const before = Array.from(text.slice(Math.max(0, start - 2), start)).at(-1) || '';
+  const after = Array.from(text.slice(end, end + 2))[0] || '';
+  return !word.test(before) && !word.test(after);
+}
+/** Literal, whitespace-flexible matches with indices on ORIGINAL UTF-16 text. */
+export function findPhraseMatches(text: string, phrase: string): { start: number; end: number }[] {
+  if (!phrase.trim()) return [];
+  const pattern = phrase.trim().split(/\s+/u).map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+  const matches = Array.from(text.matchAll(new RegExp(pattern, 'giu')));
+  return matches.filter(match => atWordBoundaries(text, match.index!, match.index! + match[0].length))
+    .map(match => ({ start: match.index!, end: match.index! + match[0].length }));
+}
+
+/** Fail closed for unresolved/ambiguous phrases; preserve valid repeated occurrences. */
 export function buildRenderSlices(text: string, approvedSpans: ApprovedSpan[]): RenderSlice[] {
   if (!text) return [];
-  if (!approvedSpans || approvedSpans.length === 0) {
-    return [{ text, isHighlight: false }];
+  const accepted: ApprovedSpan[] = [];
+  const pending: ApprovedSpan[] = [];
+  const overlaps = (span: ApprovedSpan) => accepted.some(other => span.startOffset < other.endOffset && span.endOffset > other.startOffset);
+  for (const span of [...(approvedSpans || [])].sort((a, b) => a.startOffset - b.startOffset)) {
+    if (!span.text?.trim() || !Number.isInteger(span.startOffset) || !Number.isInteger(span.endOffset)
+      || span.startOffset < 0 || span.startOffset >= span.endOffset) continue;
+    const exact = span.endOffset <= text.length
+      && normalizePhrase(text.slice(span.startOffset, span.endOffset)) === normalizePhrase(span.text)
+      && atWordBoundaries(text, span.startOffset, span.endOffset);
+    if (exact) {
+      if (!overlaps(span)) accepted.push(span);
+    } else pending.push(span);
   }
-
-  const lowerText = text.toLowerCase();
-
-  // Self-heal and reconcile spans against the actual text if offsets are shifted
-  const reconciledSpans: ApprovedSpan[] = approvedSpans.map(span => {
-    if (!span.text) return span;
-    // Check if the current offsets already exactly match span.text
-    if (
-      span.startOffset >= 0 &&
-      span.endOffset <= text.length &&
-      span.startOffset < span.endOffset &&
-      text.slice(span.startOffset, span.endOffset).toLowerCase() === span.text.toLowerCase()
-    ) {
-      return span;
-    }
-
-    // Offset is shifted or inaccurate! Find the real occurrence of span.text in text:
-    const target = span.text.toLowerCase().trim();
-    if (!target) return span;
-
-    let realIdx = -1;
-
-    // 1. Try word-boundary match first
-    let searchFrom = 0;
-    while (searchFrom < lowerText.length) {
-      const found = lowerText.indexOf(target, searchFrom);
-      if (found === -1) break;
-      const isWordStart = found === 0 || !/[a-z0-9]/i.test(lowerText[found - 1]);
-      const isWordEnd =
-        found + target.length >= lowerText.length || !/[a-z0-9]/i.test(lowerText[found + target.length]);
-      if (isWordStart && isWordEnd) {
-        realIdx = found;
-        break;
-      }
-      searchFrom = found + 1;
-    }
-
-    // 2. Fallback to general substring match
-    if (realIdx === -1) {
-      realIdx = lowerText.indexOf(target);
-    }
-
-    if (realIdx !== -1) {
-      return {
-        ...span,
-        startOffset: realIdx,
-        endOffset: realIdx + target.length,
-      };
-    }
-
-    return span;
-  });
-
-  // Filter and sort spans by startOffset
-  const validSpans = reconciledSpans
-    .filter(span => span.startOffset >= 0 && span.endOffset <= text.length && span.startOffset < span.endOffset)
-    .sort((a, b) => a.startOffset - b.startOffset);
-
-  // Remove overlapping collisions (first span wins)
-  const nonOverlapping: ApprovedSpan[] = [];
-  let lastEnd = 0;
-  for (const span of validSpans) {
-    if (span.startOffset >= lastEnd) {
-      nonOverlapping.push(span);
-      lastEnd = span.endOffset;
-    }
+  for (const span of pending) {
+    const matches = findPhraseMatches(text, span.text);
+    if (matches.length !== 1) continue;
+    const repaired = { ...span, startOffset: matches[0].start, endOffset: matches[0].end };
+    if (!overlaps(repaired)) accepted.push(repaired);
   }
-
   const slices: RenderSlice[] = [];
-  let currentIndex = 0;
-
-  for (const span of nonOverlapping) {
-    if (span.startOffset > currentIndex) {
-      slices.push({
-        text: text.slice(currentIndex, span.startOffset),
-        isHighlight: false,
-      });
-    }
-
-    slices.push({
-      text: text.slice(span.startOffset, span.endOffset),
-      isHighlight: true,
-      annotation: span,
-    });
-
-    currentIndex = span.endOffset;
+  let cursor = 0;
+  for (const span of accepted.sort((a, b) => a.startOffset - b.startOffset)) {
+    if (span.startOffset > cursor) slices.push({ text: text.slice(cursor, span.startOffset), isHighlight: false });
+    slices.push({ text: text.slice(span.startOffset, span.endOffset), isHighlight: true, annotation: span });
+    cursor = span.endOffset;
   }
-
-  if (currentIndex < text.length) {
-    slices.push({
-      text: text.slice(currentIndex),
-      isHighlight: false,
-    });
-  }
-
+  if (cursor < text.length) slices.push({ text: text.slice(cursor), isHighlight: false });
   return slices;
 }
 
@@ -211,4 +154,3 @@ export function mergeShortUnits(units: string[], options: MergeUnitsOptions = {}
 
   return result.length > 0 ? result : units;
 }
-

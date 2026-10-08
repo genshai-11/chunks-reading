@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ReadingResource, PhraseAnnotation, PhraseType, Granularity } from '../types';
 import { updateResourceAnnotations, publishResource } from '../services/resourceService';
 import { detectPhrasesDeterministic, detectPhrasesWithAI } from '../services/phraseDetection';
-import { buildRenderSlices } from '../utils/textSegmentation';
+import { buildRenderSlices, findPhraseMatches } from '../utils/textSegmentation';
 import {
   Highlighter,
   Plus,
@@ -32,6 +32,12 @@ interface PhraseEditorStudioProps {
   onUpdateResource: (updated: ReadingResource) => void;
   onStartSession?: (resource: ReadingResource) => void;
   onClose?: () => void;
+  /** Optional: controlled granularity from parent classroom. When provided,
+   *  the internal granularity toggle is hidden and this value is used instead. */
+  controlledGranularity?: Granularity;
+  /** Optional: controlled active unit index from parent classroom. When
+   *  provided, the internal stepper is hidden and this value is used instead. */
+  controlledUnitIndex?: number;
 }
 
 export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
@@ -39,10 +45,16 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
   onUpdateResource,
   onStartSession,
   onClose,
+  controlledGranularity,
+  controlledUnitIndex,
 }) => {
   const [annotations, setAnnotations] = useState<PhraseAnnotation[]>(resource.annotations || []);
-  const [granularity, setGranularity] = useState<Granularity>('sentence');
-  const [activeUnitIndex, setActiveUnitIndex] = useState(0);
+  const [internalGranularity, setInternalGranularity] = useState<Granularity>('sentence');
+  const [internalUnitIndex, setInternalUnitIndex] = useState(0);
+
+  // Resolve controlled vs internal: when parent provides these props, use them.
+  const granularity: Granularity = controlledGranularity ?? internalGranularity;
+  const activeUnitIndex: number = controlledUnitIndex ?? internalUnitIndex;
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -81,65 +93,102 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
   // Synchronize annotations if resource changes
   useEffect(() => {
     setAnnotations(resource.annotations || []);
-  }, [resource.id]);
+  }, [resource.id, resource.annotations]);
+
+  useEffect(() => {
+    setShowAddForm(false);
+    setSelectedText('');
+    setSelectionOffsets(null);
+    setEditingAnnotationId(null);
+  }, [resource.id, activeUnitIndex, granularity]);
 
   // Filter annotations for currently active unit and granularity
   const currentUnitAnnotations = annotations.filter(
     a => a.unitIndex === activeUnitIndex && a.unitType === granularity
   );
 
-  // Handle cursor selection within reading text with smart word boundary expansion
+  /**
+   * Handle cursor selection using real DOM Range offsets within readingTextRef.
+   *
+   * This correctly identifies the actual selected occurrence — including repeated
+   * phrases — rather than always snapping to the first indexOf match.
+   */
   const handleMouseUp = () => {
     const sel = window.getSelection();
-    if (!sel || sel.isCollapsed) {
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
       return;
     }
 
-    const rawText = sel.toString().trim();
-    if (!rawText || rawText.length < 2) return;
+    const container = readingTextRef.current;
+    if (!container) return;
 
-    // Find index of selection in current unit text
-    const lowerUnit = currentUnitText.toLowerCase();
-    const lowerSelection = rawText.toLowerCase();
-    const foundIdx = lowerUnit.indexOf(lowerSelection);
+    const range = sel.getRangeAt(0);
 
-    if (foundIdx !== -1) {
-      // Smart expand to word boundaries so leading character like 'G' is automatically included
-      const { start, end } = expandToWordBoundaries(currentUnitText, foundIdx, foundIdx + rawText.length);
-      const cleanMatched = currentUnitText.slice(start, end).trim();
-      const realStart = currentUnitText.indexOf(cleanMatched, Math.max(0, start - 2));
-      const finalStart = realStart !== -1 ? realStart : start;
-      const finalEnd = finalStart + cleanMatched.length;
-
-      setSelectedText(cleanMatched);
-      setSelectionOffsets({
-        start: finalStart,
-        end: finalEnd,
-      });
-      setSelectedMeaning('');
-      setAddFormError('');
-      setShowAddForm(true);
+    // Reject selections originating outside our reading container
+    if (!container.contains(range.commonAncestorContainer)) {
+      return;
     }
+
+    // Walk text nodes to convert DOM node+offset into a character offset within
+    // the container's concatenated text (which equals currentUnitText).
+    const domToChar = (targetNode: Node, targetOffset: number): number => {
+      const before = document.createRange();
+      before.selectNodeContents(container);
+      before.setEnd(targetNode, targetOffset);
+      return before.toString().length;
+    };
+
+    const rawStart = domToChar(range.startContainer, range.startOffset);
+    const rawEnd   = domToChar(range.endContainer,   range.endOffset);
+
+    if (rawStart === -1 || rawEnd === -1 || rawStart >= rawEnd) return;
+
+    // Expand to word boundaries in the original unit text
+    const { start, end } = expandToWordBoundaries(currentUnitText, rawStart, rawEnd);
+    if (start >= end || end > currentUnitText.length) return;
+
+    const cleanMatched = currentUnitText.slice(start, end).trim();
+    if (!cleanMatched || cleanMatched.length < 2) return;
+
+    // Re-anchor after trim (trim may have moved the start forward)
+    const trimmedStart = currentUnitText.indexOf(cleanMatched, start);
+    const finalStart = trimmedStart !== -1 ? trimmedStart : start;
+    const finalEnd = finalStart + cleanMatched.length;
+
+    setSelectedText(cleanMatched);
+    setSelectionOffsets({ start: finalStart, end: finalEnd });
+    setSelectedMeaning('');
+    setAddFormError('');
+    setShowAddForm(true);
   };
 
+  /**
+   * Called when the user manually edits the phrase text field after DOM selection.
+   * If the current offsets already point to the same text (case-insensitive), keep
+   * them so we don't lose the correct repeated-occurrence position.  Only
+   * re-resolve if the text no longer matches what's stored.
+   */
   const handlePhraseTextChange = (newVal: string) => {
     setSelectedText(newVal);
     setAddFormError('');
-    const lowerUnit = currentUnitText.toLowerCase();
-    const lowerTarget = newVal.trim().toLowerCase();
-    if (!lowerTarget) {
+    const trimTarget = newVal.trim();
+    if (!trimTarget) {
       setSelectionOffsets(null);
       return;
     }
-    const idx = lowerUnit.indexOf(lowerTarget);
-    if (idx !== -1) {
-      setSelectionOffsets({
-        start: idx,
-        end: idx + lowerTarget.length,
-      });
-    } else {
-      setSelectionOffsets(null);
+    // If existing offsets still match the new value, keep them (preserves
+    // the correct occurrence captured from the DOM Range).
+    if (
+      selectionOffsets &&
+      currentUnitText.slice(selectionOffsets.start, selectionOffsets.end)
+        .toLowerCase() === trimTarget.toLowerCase()
+    ) {
+      return;
     }
+    // Offsets no longer match — fall back to first occurrence (best effort for
+    // keyboard-typed phrases where no DOM Range is available).
+    const matches = findPhraseMatches(currentUnitText, trimTarget);
+    setSelectionOffsets(matches.length === 1 ? matches[0] : null);
   };
 
   // Confirm adding new highlight
@@ -152,23 +201,34 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
       return;
     }
 
-    // Resolve exact offsets against current unit text
-    const lowerUnit = currentUnitText.toLowerCase();
-    const idx = lowerUnit.indexOf(trimmed.toLowerCase());
-    if (idx === -1) {
-      setAddFormError(`Không tìm thấy "${trimmed}" trong đoạn/câu này. Vui lòng kiểm tra lại.`);
-      return;
+    // Use stored DOM-Range offsets when available (preserves correct occurrence).
+    // Fall back to first indexOf only when user typed the phrase without a DOM selection.
+    let startOffset: number;
+    let endOffset: number;
+    if (
+      selectionOffsets &&
+      selectionOffsets.start >= 0 &&
+      selectionOffsets.end <= currentUnitText.length &&
+      currentUnitText.slice(selectionOffsets.start, selectionOffsets.end)
+        .toLowerCase() === trimmed.toLowerCase()
+    ) {
+      startOffset = selectionOffsets.start;
+      endOffset = selectionOffsets.end;
+    } else {
+      const matches = findPhraseMatches(currentUnitText, trimmed);
+      if (matches.length !== 1) {
+        setAddFormError(matches.length ? 'Cụm từ lặp lại: hãy bôi chọn đúng vị trí trong bài đọc.' : `Không tìm thấy "${trimmed}" trong đoạn/câu này.`);
+        return;
+      }
+      startOffset = matches[0].start;
+      endOffset = matches[0].end;
     }
-
-    const startOffset = idx;
-    const endOffset = idx + trimmed.length;
     const exactText = currentUnitText.slice(startOffset, endOffset);
 
     // Check collision with existing annotations
     const collision = currentUnitAnnotations.find(
       a =>
-        (startOffset >= a.startOffset && startOffset < a.endOffset) ||
-        (endOffset > a.startOffset && endOffset <= a.endOffset)
+        startOffset < a.endOffset && endOffset > a.startOffset
     );
 
     if (collision) {
@@ -384,15 +444,15 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
 
       {/* Controls Bar: Mode Switcher & Unit Stepper */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[#FAF8F0] p-3 neo-box-sm">
-        {/* Granularity switch */}
-        <div className="flex items-center gap-2">
+        {/* Granularity switch — hidden when parent controls granularity */}
+        {!controlledGranularity && <div className="flex items-center gap-2">
           <span className="text-[11px] font-mono font-bold uppercase text-neutral-600">Unit:</span>
           <div className="flex border border-black bg-white">
             <button
               type="button"
               onClick={() => {
-                setGranularity('sentence');
-                setActiveUnitIndex(0);
+                setInternalGranularity('sentence');
+                setInternalUnitIndex(0);
               }}
               className={`px-2.5 py-0.5 text-xs font-mono font-bold uppercase ${
                 granularity === 'sentence' ? 'bg-[#FFE500] text-black' : 'text-neutral-700'
@@ -403,8 +463,8 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
             <button
               type="button"
               onClick={() => {
-                setGranularity('paragraph');
-                setActiveUnitIndex(0);
+                setInternalGranularity('paragraph');
+                setInternalUnitIndex(0);
               }}
               className={`px-2.5 py-0.5 text-xs font-mono font-bold uppercase border-l border-black ${
                 granularity === 'paragraph' ? 'bg-[#FFE500] text-black' : 'text-neutral-700'
@@ -413,14 +473,14 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
               Paragraph
             </button>
           </div>
-        </div>
+        </div>}
 
-        {/* Unit Stepper */}
-        <div className="flex items-center gap-1.5">
+        {/* Unit Stepper — hidden when parent controls unit index */}
+        {controlledUnitIndex === undefined && <div className="flex items-center gap-1.5">
           <button
             type="button"
             disabled={activeUnitIndex === 0}
-            onClick={() => setActiveUnitIndex(prev => Math.max(0, prev - 1))}
+            onClick={() => setInternalUnitIndex(prev => Math.max(0, prev - 1))}
             className="neo-btn-sm px-2 py-0.5 bg-white text-black text-xs font-bold"
           >
             <ChevronLeft size={14} />
@@ -431,12 +491,12 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
           <button
             type="button"
             disabled={activeUnitIndex >= units.length - 1}
-            onClick={() => setActiveUnitIndex(prev => Math.min(units.length - 1, prev + 1))}
+            onClick={() => setInternalUnitIndex(prev => Math.min(units.length - 1, prev + 1))}
             className="neo-btn-sm px-2 py-0.5 bg-white text-black text-xs font-bold"
           >
             <ChevronRight size={14} />
           </button>
-        </div>
+        </div>}
 
         {/* Suggestion triggers */}
         <div className="flex items-center gap-2">
