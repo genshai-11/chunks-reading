@@ -51,6 +51,8 @@
         "status": { "type": "string", "enum": ["active", "ended"], "description": "Room operational status" },
         "granularity": { "type": "string", "enum": ["sentence", "paragraph"], "description": "Reading unit granularity" },
         "highlightEnabled": { "type": "boolean", "description": "Whether approved phrase highlights are visible" },
+        "eraseEffect": { "type": "string", "enum": ["vaporize", "dissolve", "wipe", "fade", "eraser", "dust", "sparkle"], "description": "Shared text erase renderer" },
+        "dustAngle": { "type": "number", "minimum": -180, "maximum": 180, "description": "Dust sweep and travel angle; 90 points down, default -45" },
         "timingPolicy": { "type": "string", "enum": ["hold_then_erase", "erase_within_window"], "description": "Eraser timing model" },
         "holdDurationMs": { "type": "number", "description": "Hold duration in milliseconds" },
         "eraseDurationMs": { "type": "number", "description": "Erase duration in milliseconds" },

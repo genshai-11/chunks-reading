@@ -68,6 +68,7 @@ export interface CurrentUnitPayload {
   granularity: Granularity;
   text: string;
   annotations: ApprovedSpan[];
+  isFullReview?: boolean;
 }
 
 export interface ClassroomRoom {
@@ -85,6 +86,18 @@ export interface ClassroomRoom {
   holdDurationMs: number;
   eraseDurationMs: number;
   totalWindowMs: number;
+  // Separate timing profiles for sentence vs paragraph
+  sentenceHoldMs?: number;
+  sentenceEraseMs?: number;
+  paragraphHoldMs?: number;
+  paragraphEraseMs?: number;
+  // Full text review mode (show entire text without auto-hide timer)
+  isFullReview?: boolean;
+  // Dynamic pacing and auto-merge settings
+  dynamicPacingEnabled?: boolean;
+  readingWpm?: number;
+  autoMergeShortUnits?: boolean;
+  minWordsPerUnit?: number;
   playbackStatus: PlaybackStatus;
   currentUnit: CurrentUnitPayload | null;
   serverStartTime: number | null; // epoch ms

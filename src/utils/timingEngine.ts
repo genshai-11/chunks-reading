@@ -35,6 +35,70 @@ export function getEffectiveDurations(
   };
 }
 
+export interface DynamicPacingOptions {
+  text: string;
+  baseHoldMs: number;
+  granularity?: 'sentence' | 'paragraph';
+  readingWpm?: number;
+  minHoldMs?: number;
+  maxHoldMs?: number;
+}
+
+/**
+ * Calculates adaptive hold time based on word count and reading WPM.
+ * Automatically gives more time for longer sentences/paragraphs and prevents
+ * excessive lingering for very short chunks.
+ */
+export function calculateDynamicHoldDuration(options: DynamicPacingOptions): {
+  holdDurationMs: number;
+  wordCount: number;
+  isAdjusted: boolean;
+  adjustedDiffMs: number;
+} {
+  const {
+    text,
+    baseHoldMs,
+    granularity = 'sentence',
+    readingWpm = 160,
+    minHoldMs = granularity === 'sentence' ? 1500 : 5000,
+    maxHoldMs = granularity === 'sentence' ? 20000 : 60000,
+  } = options;
+
+  if (!text || !text.trim()) {
+    return {
+      holdDurationMs: baseHoldMs,
+      wordCount: 0,
+      isAdjusted: false,
+      adjustedDiffMs: 0,
+    };
+  }
+
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const wordCount = words.length;
+
+  // Benchmark typical word counts
+  const benchmarkWords = granularity === 'sentence' ? 12 : 45;
+  // Milliseconds per word at the selected WPM
+  const msPerWord = Math.round(60000 / Math.max(80, Math.min(300, readingWpm)));
+
+  // Word count delta from benchmark
+  const diffWords = wordCount - benchmarkWords;
+  // Apply proportional scaling with damping factor (0.7) to keep pacing smooth
+  const diffMs = Math.round(diffWords * msPerWord * 0.7);
+
+  const rawHold = baseHoldMs + diffMs;
+  const clampedHold = Math.max(minHoldMs, Math.min(maxHoldMs, rawHold));
+  // Round to nearest 250ms for clean presentation numbers
+  const roundedHold = Math.round(clampedHold / 250) * 250;
+
+  return {
+    holdDurationMs: roundedHold,
+    wordCount,
+    isAdjusted: roundedHold !== baseHoldMs,
+    adjustedDiffMs: roundedHold - baseHoldMs,
+  };
+}
+
 /**
  * Authoritatively compute the current playback phase, remaining milliseconds, and erase progress (0 to 1).
  * Works purely from server timestamps and elapsed times, so late joiners and background tabs sync instantly.
@@ -43,7 +107,7 @@ export function calculateRoomTimeline(
   room: ClassroomRoom,
   currentClientTime: number = Date.now()
 ): CalculatedTimeline {
-  const { timingPolicy, holdDurationMs, eraseDurationMs, totalWindowMs, playbackStatus, serverStartTime, pausedElapsedMs } = room;
+  const { timingPolicy, holdDurationMs, eraseDurationMs, totalWindowMs, playbackStatus, serverStartTime, pausedElapsedMs, isFullReview } = room;
 
   const { effectiveHoldMs, effectiveEraseMs, totalDurationMs } = getEffectiveDurations(
     timingPolicy,
@@ -52,11 +116,12 @@ export function calculateRoomTimeline(
     totalWindowMs
   );
 
-  if (playbackStatus === 'idle') {
+  // Full Text Review mode has no countdown: text remains shown until teacher changes state
+  if (isFullReview || playbackStatus === 'manual_show') {
     return {
-      phase: 'idle',
+      phase: 'manual_show',
       progress: 0,
-      remainingMs: totalDurationMs,
+      remainingMs: Infinity,
       totalDurationMs,
       effectiveHoldMs,
       effectiveEraseMs,
@@ -64,11 +129,11 @@ export function calculateRoomTimeline(
     };
   }
 
-  if (playbackStatus === 'manual_show') {
+  if (playbackStatus === 'idle') {
     return {
-      phase: 'manual_show',
+      phase: 'idle',
       progress: 0,
-      remainingMs: Infinity,
+      remainingMs: totalDurationMs,
       totalDurationMs,
       effectiveHoldMs,
       effectiveEraseMs,

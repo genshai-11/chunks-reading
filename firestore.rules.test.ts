@@ -240,11 +240,12 @@ describe('4. Resource Isolation Rules', () => {
 
 describe('5. Timing Contracts & Erase Effects', () => {
   const VALID_TIMING_POLICIES = ['hold_then_erase', 'erase_within_window'];
-  const VALID_ERASE_EFFECTS = ['vaporize', 'dissolve', 'fade', 'wipe'];
+  const VALID_ERASE_EFFECTS = ['vaporize', 'dissolve', 'fade', 'wipe', 'eraser', 'dust', 'sparkle'];
   const VALID_PLAYBACK_STATES = ['idle', 'playing', 'paused', 'manual_show', 'ended'];
 
-  test('All 4 erase effects are recognized in room contract', () => {
-    expect(VALID_ERASE_EFFECTS.length).toBe(4);
+  test('All 7 erase effects are recognized in room contract', () => {
+    expect(VALID_ERASE_EFFECTS.length).toBe(7);
+    for (const effect of ['eraser', 'dust', 'sparkle']) expect(VALID_ERASE_EFFECTS.includes(effect)).toBe(true);
     expect(VALID_ERASE_EFFECTS.includes('vaporize')).toBe(true);
     expect(VALID_ERASE_EFFECTS.includes('dissolve')).toBe(true);
     expect(VALID_ERASE_EFFECTS.includes('fade')).toBe(true);

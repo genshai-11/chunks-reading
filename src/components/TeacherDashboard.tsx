@@ -34,9 +34,10 @@ import {
   hideTurnCommand,
   endRoomCommand,
   removeParticipant,
+  setFullReviewCommand,
 } from '../services/roomService';
-import { calculateRoomTimeline } from '../utils/timingEngine';
-import { buildRenderSlices, segmentSentences, segmentParagraphs } from '../utils/textSegmentation';
+import { calculateRoomTimeline, calculateDynamicHoldDuration } from '../utils/timingEngine';
+import { buildRenderSlices, segmentSentences, segmentParagraphs, mergeShortUnits } from '../utils/textSegmentation';
 import { ResourceEditorModal } from './ResourceEditorModal';
 import { PhraseReviewModal } from './PhraseReviewModal';
 import { TimingPreview } from './TimingPreview';
@@ -77,7 +78,8 @@ import {
   RefreshCw,
   X,
   ExternalLink,
-  Monitor
+  Monitor,
+  LayoutGrid
 } from 'lucide-react';
 
 const ERASE_EFFECT_NAMES: Record<EraseEffect, string> = {
@@ -88,9 +90,6 @@ const ERASE_EFFECT_NAMES: Record<EraseEffect, string> = {
   eraser: 'Gôm lau',
   dust: 'Bụi chữ bay',
   sparkle: 'Làn sáng cuốn chữ',
-  eraser: 'Tẩy xóa',
-  dust: 'Bụi phấn',
-  sparkle: 'Lấp lánh',
 };
 
 interface TeacherDashboardProps {
@@ -135,12 +134,28 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [stagedGranularity, setStagedGranularity] = useState<Granularity>('sentence');
   const [stagedHighlight, setStagedHighlight] = useState(true);
   const [stagedPolicy, setStagedPolicy] = useState<TimingPolicy>('hold_then_erase');
-  const [stagedHoldMs, setStagedHoldMs] = useState(3000);
+  const [stagedHoldMs, setStagedHoldMs] = useState(3500);
   const [stagedEraseMs, setStagedEraseMs] = useState(1000);
   const [stagedWindowMs, setStagedWindowMs] = useState(3000);
   const [stagedEraseEffect, setStagedEraseEffect] = useState<EraseEffect>('eraser');
   const [stagedDustAngle, setStagedDustAngle] = useState(DEFAULT_DUST_ANGLE);
   const [isApplying, setIsApplying] = useState(false);
+
+  // Separate Timing Profiles for Sentence vs Paragraph (Requirement 6)
+  const [stagedSentenceHoldMs, setStagedSentenceHoldMs] = useState(3500);
+  const [stagedSentenceEraseMs, setStagedSentenceEraseMs] = useState(1000);
+  const [stagedParagraphHoldMs, setStagedParagraphHoldMs] = useState(12000);
+  const [stagedParagraphEraseMs, setStagedParagraphEraseMs] = useState(2500);
+  const [timingProfileTab, setTimingProfileTab] = useState<Granularity>('sentence');
+
+  // Dynamic Pacing & Length Calibration (Requirement 7)
+  const [dynamicPacingEnabled, setDynamicPacingEnabled] = useState(true);
+  const [readingWpm, setReadingWpm] = useState(160);
+  const [autoMergeShortUnits, setAutoMergeShortUnits] = useState(false);
+  const [minWordsPerUnit, setMinWordsPerUnit] = useState(5);
+
+  // Settings Panel Tab Switcher (Requirement 4)
+  const [settingsTab, setSettingsTab] = useState<'timings' | 'switch_lesson' | 'participants' | 'all'>('timings');
 
   // Slide Remote HUD, Auto-Advance & Collapsible panels state
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -165,6 +180,14 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     stagedWindowMs,
     stagedEraseEffect,
     stagedDustAngle,
+    stagedSentenceHoldMs,
+    stagedSentenceEraseMs,
+    stagedParagraphHoldMs,
+    stagedParagraphEraseMs,
+    dynamicPacingEnabled,
+    readingWpm,
+    autoMergeShortUnits,
+    minWordsPerUnit,
   });
   stagedSettingsRef.current = {
     stagedGranularity,
@@ -175,6 +198,14 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     stagedWindowMs,
     stagedEraseEffect,
     stagedDustAngle,
+    stagedSentenceHoldMs,
+    stagedSentenceEraseMs,
+    stagedParagraphHoldMs,
+    stagedParagraphEraseMs,
+    dynamicPacingEnabled,
+    readingWpm,
+    autoMergeShortUnits,
+    minWordsPerUnit,
   };
 
   const lastBackPressTimeRef = React.useRef<number>(0);
@@ -216,6 +247,14 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         if (existingRoom.eraseEffect) {
           setStagedEraseEffect(existingRoom.eraseEffect);
         }
+        if (existingRoom.sentenceHoldMs) setStagedSentenceHoldMs(existingRoom.sentenceHoldMs);
+        if (existingRoom.sentenceEraseMs) setStagedSentenceEraseMs(existingRoom.sentenceEraseMs);
+        if (existingRoom.paragraphHoldMs) setStagedParagraphHoldMs(existingRoom.paragraphHoldMs);
+        if (existingRoom.paragraphEraseMs) setStagedParagraphEraseMs(existingRoom.paragraphEraseMs);
+        if (existingRoom.dynamicPacingEnabled !== undefined) setDynamicPacingEnabled(existingRoom.dynamicPacingEnabled);
+        if (existingRoom.readingWpm) setReadingWpm(existingRoom.readingWpm);
+        if (existingRoom.autoMergeShortUnits !== undefined) setAutoMergeShortUnits(existingRoom.autoMergeShortUnits);
+        if (existingRoom.minWordsPerUnit) setMinWordsPerUnit(existingRoom.minWordsPerUnit);
 
         const matchedResource = data.find(r => r.id === existingRoom.resourceId);
         if (matchedResource) {
@@ -327,7 +366,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           stagedEraseMs,
           stagedWindowMs,
           stagedEraseEffect,
-        stagedDustAngle
+          stagedDustAngle
         );
         setActivePresentedResource(res);
         setStagedUnitIndex(0);
@@ -443,9 +482,20 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         stagedEraseMs,
         stagedWindowMs,
         stagedEraseEffect,
-        stagedDustAngle
+        stagedDustAngle,
+        {
+          sentenceHoldMs: stagedSentenceHoldMs,
+          sentenceEraseMs: stagedSentenceEraseMs,
+          paragraphHoldMs: stagedParagraphHoldMs,
+          paragraphEraseMs: stagedParagraphEraseMs,
+          dynamicPacingEnabled,
+          readingWpm,
+          autoMergeShortUnits,
+          minWordsPerUnit,
+          customUnitsList: currentUnitsList,
+        }
       );
-      setDashboardNotice({ type: 'success', text: `Đã áp dụng đoạn #${stagedUnitIndex + 1} sang màn hình học sinh.` });
+      setDashboardNotice({ type: 'success', text: `Đã lưu cài đặt và áp dụng đoạn #${stagedUnitIndex + 1} sang màn hình học sinh.` });
     } catch (err: any) {
       setDashboardNotice({ type: 'error', text: `Áp dụng thất bại: ${err.message}` });
     } finally {
@@ -510,10 +560,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
   };
 
-  // Copy join link
+  // Copy join link (Dedicated Student Endpoint)
   const handleCopyLink = () => {
     if (!activeRoom) return;
-    const url = `${window.location.origin}/?room=${activeRoom.id}`;
+    const url = `${window.location.origin}/student?room=${activeRoom.id}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
@@ -534,17 +584,54 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   });
 
   // Calculate staged unit text and slices for private teacher preview
-  const currentUnitsList = activePresentedResource
+  const rawUnitsList = activePresentedResource
     ? stagedGranularity === 'sentence'
       ? activePresentedResource.sentences
       : activePresentedResource.paragraphs
     : [];
+
+  // Intelligently merge short units if setting enabled (Requirement 7)
+  const currentUnitsList = React.useMemo(() => {
+    if (!autoMergeShortUnits || rawUnitsList.length === 0) return rawUnitsList;
+    return mergeShortUnits(rawUnitsList, { minWords: minWordsPerUnit });
+  }, [rawUnitsList, autoMergeShortUnits, minWordsPerUnit]);
+
   currentUnitsListRef.current = currentUnitsList;
   const stagedText = currentUnitsList[stagedUnitIndex] || '';
 
+  // Dynamic Pacing calculation for active unit (Requirement 7)
+  const dynamicHoldInfo = React.useMemo(() => {
+    if (!dynamicPacingEnabled || !stagedText) {
+      return {
+        holdDurationMs: stagedHoldMs,
+        wordCount: stagedText ? stagedText.trim().split(/\s+/).filter(Boolean).length : 0,
+        isAdjusted: false,
+        adjustedDiffMs: 0,
+      };
+    }
+    return calculateDynamicHoldDuration({
+      text: stagedText,
+      baseHoldMs: stagedHoldMs,
+      granularity: stagedGranularity,
+      readingWpm,
+    });
+  }, [stagedText, stagedHoldMs, stagedGranularity, dynamicPacingEnabled, readingWpm]);
+
+  // Helper to retrieve calibrated hold duration for any index
+  const getDynamicHoldForIndex = (index: number) => {
+    const text = currentUnitsList[index] || '';
+    if (!dynamicPacingEnabled || !text) return stagedHoldMs;
+    return calculateDynamicHoldDuration({
+      text,
+      baseHoldMs: stagedHoldMs,
+      granularity: stagedGranularity,
+      readingWpm,
+    }).holdDurationMs;
+  };
+
   const stagedApprovedSpans = activePresentedResource
     ? activePresentedResource.annotations
-        .filter(a => a.status === 'approved' && a.unitIndex === stagedUnitIndex && a.unitType === stagedGranularity)
+        .filter(a => a.status === 'approved' && (stagedText.includes(a.text) || (a.unitIndex === stagedUnitIndex && a.unitType === stagedGranularity)))
         .map(a => ({
           id: a.id,
           text: a.text,
@@ -556,6 +643,98 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     : [];
 
   const stagedSlices = buildRenderSlices(stagedText, stagedHighlight ? stagedApprovedSpans : []);
+
+  // Granularity switcher: sentence vs paragraph (Requirement 5 & 6)
+  const handleSwitchGranularity = async (newGranularity: Granularity) => {
+    if (newGranularity === stagedGranularity && !activeRoom?.isFullReview) return;
+    setStagedGranularity(newGranularity);
+    setStagedUnitIndex(0);
+
+    const nextHoldMs = newGranularity === 'sentence' ? stagedSentenceHoldMs : stagedParagraphHoldMs;
+    const nextEraseMs = newGranularity === 'sentence' ? stagedSentenceEraseMs : stagedParagraphEraseMs;
+    setStagedHoldMs(nextHoldMs);
+    setStagedEraseMs(nextEraseMs);
+
+    if (activeRoom && activePresentedResource) {
+      const raw = newGranularity === 'sentence'
+        ? activePresentedResource.sentences
+        : activePresentedResource.paragraphs;
+      const targetUnits = autoMergeShortUnits ? mergeShortUnits(raw, { minWords: minWordsPerUnit }) : raw;
+
+      try {
+        await applyToRoomCommand(
+          activeRoom.id,
+          activeRoom.revision,
+          activePresentedResource,
+          0,
+          newGranularity,
+          stagedHighlight,
+          stagedPolicy,
+          nextHoldMs,
+          nextEraseMs,
+          stagedWindowMs,
+          stagedEraseEffect,
+          stagedDustAngle,
+          {
+            sentenceHoldMs: stagedSentenceHoldMs,
+            sentenceEraseMs: stagedSentenceEraseMs,
+            paragraphHoldMs: stagedParagraphHoldMs,
+            paragraphEraseMs: stagedParagraphEraseMs,
+            dynamicPacingEnabled,
+            readingWpm,
+            autoMergeShortUnits,
+            minWordsPerUnit,
+            customUnitsList: targetUnits,
+          }
+        );
+        setDashboardNotice({
+          type: 'success',
+          text: `Đã chuyển sang chế độ ${newGranularity === 'sentence' ? 'Câu (Sentence)' : 'Đoạn (Paragraph)'} và áp dụng thời gian ${nextHoldMs / 1000}s.`,
+        });
+      } catch (err: any) {
+        console.error('Error switching granularity:', err);
+      }
+    }
+  };
+
+  // Full Text Review Mode handlers (Requirement 6)
+  const isFullReviewActive = Boolean(activeRoom?.isFullReview);
+
+  const handleToggleFullReview = async () => {
+    if (!activeRoom || !activePresentedResource) return;
+    try {
+      const nextReview = !isFullReviewActive;
+      await setFullReviewCommand(
+        activeRoom.id,
+        activeRoom.revision,
+        activePresentedResource,
+        nextReview
+      );
+      setDashboardNotice({
+        type: nextReview ? 'success' : 'info',
+        text: nextReview
+          ? 'Đã bật chế độ Xem lại toàn bộ bài đọc! Màn hình học sinh đang hiển thị toàn văn không giới hạn thời gian.'
+          : 'Đã tắt chế độ Xem lại toàn bộ bài đọc. Trở về nhịp đọc từng câu/đoạn.',
+      });
+    } catch (err: any) {
+      setDashboardNotice({ type: 'error', text: `Lỗi bật review toàn bộ: ${err.message}` });
+    }
+  };
+
+  const handleExitFullReview = async () => {
+    if (!activeRoom || !activePresentedResource) return;
+    try {
+      await setFullReviewCommand(
+        activeRoom.id,
+        activeRoom.revision,
+        activePresentedResource,
+        false
+      );
+      setDashboardNotice({ type: 'info', text: 'Đã thoát chế độ Review toàn bài.' });
+    } catch (err: any) {
+      console.error('Error exiting review:', err);
+    }
+  };
 
   // Step-only navigation (updates staged unit and room without auto-triggering play)
   const handlePreviousSentenceOnly = async () => {
@@ -571,6 +750,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
     const prevIdx = currentIndex - 1;
     setStagedUnitIndex(prevIdx);
+    const holdMs = getDynamicHoldForIndex(prevIdx);
 
     try {
       await applyToRoomCommand(
@@ -581,11 +761,22 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         settings.stagedGranularity,
         settings.stagedHighlight,
         settings.stagedPolicy,
-        settings.stagedHoldMs,
+        holdMs,
         settings.stagedEraseMs,
         settings.stagedWindowMs,
         settings.stagedEraseEffect,
-        settings.stagedDustAngle
+        settings.stagedDustAngle,
+        {
+          sentenceHoldMs: stagedSentenceHoldMs,
+          sentenceEraseMs: stagedSentenceEraseMs,
+          paragraphHoldMs: stagedParagraphHoldMs,
+          paragraphEraseMs: stagedParagraphEraseMs,
+          dynamicPacingEnabled,
+          readingWpm,
+          autoMergeShortUnits,
+          minWordsPerUnit,
+          customUnitsList: currentUnitsList,
+        }
       );
     } catch (err: any) {
       console.error('Error going to previous unit:', err);
@@ -607,6 +798,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
     const nextIdx = currentIndex + 1;
     setStagedUnitIndex(nextIdx);
+    const holdMs = getDynamicHoldForIndex(nextIdx);
 
     try {
       await applyToRoomCommand(
@@ -617,11 +809,22 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         settings.stagedGranularity,
         settings.stagedHighlight,
         settings.stagedPolicy,
-        settings.stagedHoldMs,
+        holdMs,
         settings.stagedEraseMs,
         settings.stagedWindowMs,
         settings.stagedEraseEffect,
-        settings.stagedDustAngle
+        settings.stagedDustAngle,
+        {
+          sentenceHoldMs: stagedSentenceHoldMs,
+          sentenceEraseMs: stagedSentenceEraseMs,
+          paragraphHoldMs: stagedParagraphHoldMs,
+          paragraphEraseMs: stagedParagraphEraseMs,
+          dynamicPacingEnabled,
+          readingWpm,
+          autoMergeShortUnits,
+          minWordsPerUnit,
+          customUnitsList: currentUnitsList,
+        }
       );
     } catch (err: any) {
       console.error('Error advancing to next unit:', err);
@@ -644,6 +847,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
     const nextIdx = currentIndex + 1;
     setStagedUnitIndex(nextIdx);
+    const holdMs = getDynamicHoldForIndex(nextIdx);
 
     try {
       await applyToRoomCommand(
@@ -654,11 +858,22 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         settings.stagedGranularity,
         settings.stagedHighlight,
         settings.stagedPolicy,
-        settings.stagedHoldMs,
+        holdMs,
         settings.stagedEraseMs,
         settings.stagedWindowMs,
         settings.stagedEraseEffect,
-        settings.stagedDustAngle
+        settings.stagedDustAngle,
+        {
+          sentenceHoldMs: stagedSentenceHoldMs,
+          sentenceEraseMs: stagedSentenceEraseMs,
+          paragraphHoldMs: stagedParagraphHoldMs,
+          paragraphEraseMs: stagedParagraphEraseMs,
+          dynamicPacingEnabled,
+          readingWpm,
+          autoMergeShortUnits,
+          minWordsPerUnit,
+          customUnitsList: currentUnitsList,
+        }
       );
       const latestRevision = activeRoomRef.current?.revision ?? currentRoom.revision;
       await playTurnCommand(currentRoom.id, Math.max(latestRevision, currentRoom.revision + 1));
@@ -681,6 +896,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
     const prevIdx = currentIndex - 1;
     setStagedUnitIndex(prevIdx);
+    const holdMs = getDynamicHoldForIndex(prevIdx);
 
     try {
       await applyToRoomCommand(
@@ -691,11 +907,22 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         settings.stagedGranularity,
         settings.stagedHighlight,
         settings.stagedPolicy,
-        settings.stagedHoldMs,
+        holdMs,
         settings.stagedEraseMs,
         settings.stagedWindowMs,
         settings.stagedEraseEffect,
-        settings.stagedDustAngle
+        settings.stagedDustAngle,
+        {
+          sentenceHoldMs: stagedSentenceHoldMs,
+          sentenceEraseMs: stagedSentenceEraseMs,
+          paragraphHoldMs: stagedParagraphHoldMs,
+          paragraphEraseMs: stagedParagraphEraseMs,
+          dynamicPacingEnabled,
+          readingWpm,
+          autoMergeShortUnits,
+          minWordsPerUnit,
+          customUnitsList: currentUnitsList,
+        }
       );
       const latestRevision = activeRoomRef.current?.revision ?? currentRoom.revision;
       await playTurnCommand(currentRoom.id, Math.max(latestRevision, currentRoom.revision + 1));
@@ -1213,7 +1440,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="neo-badge bg-[#FFE500] text-black text-xs font-mono font-bold">
-                        Câu {stagedUnitIndex + 1} / {currentUnitsList.length}
+                        {isFullReviewActive
+                          ? 'Review Toàn bài'
+                          : `${stagedGranularity === 'paragraph' ? 'Đoạn' : 'Câu'} ${stagedUnitIndex + 1} / ${currentUnitsList.length}`}
                       </span>
                       <span className="font-mono text-xs font-bold text-neutral-800 truncate max-w-[200px] sm:max-w-xs">
                         {activePresentedResource.title}
@@ -1234,6 +1463,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
                       {/* Trạng thái phát */}
                       {(() => {
+                        if (isFullReviewActive) {
+                          return (
+                            <span className="neo-badge bg-[#00D2FF] text-black text-[10px] py-0.5 px-1.5 font-bold">
+                              📖 REVIEW TOÀN BÀI
+                            </span>
+                          );
+                        }
                         const status = activeRoom.playbackStatus;
                         if (status === 'playing') {
                           return (
@@ -1266,34 +1502,165 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   </div>
 
                   {/* Thanh tiến độ câu bài đọc mini */}
-                  <div className="w-full h-1.5 bg-neutral-200 border border-black overflow-hidden">
-                    <div
-                      style={{
-                        width: `${currentUnitsList.length > 0 ? ((stagedUnitIndex + 1) / currentUnitsList.length) * 100 : 0}%`,
-                      }}
-                      className="h-full bg-[#FF3838] transition-all duration-300"
-                    ></div>
+                  {!isFullReviewActive && (
+                    <div className="w-full h-1.5 bg-neutral-200 border border-black overflow-hidden">
+                      <div
+                        style={{
+                          width: `${currentUnitsList.length > 0 ? ((stagedUnitIndex + 1) / currentUnitsList.length) * 100 : 0}%`,
+                        }}
+                        className="h-full bg-[#FF3838] transition-all duration-300"
+                      ></div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Chế độ trình chiếu: Câu (Sentence) | Đoạn (Paragraph) | Toàn bài (Full Review) (Requirement 5 & 6) */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[#FFFDF0] border-2 border-black shadow-[1px_1px_0px_#000]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono font-bold uppercase text-neutral-700">Đơn vị đọc:</span>
+                    <div className="inline-flex border border-black bg-white shadow-[1px_1px_0px_#000]">
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchGranularity('sentence')}
+                        className={`px-2.5 py-1 text-xs font-mono font-black uppercase transition-all ${
+                          stagedGranularity === 'sentence' && !isFullReviewActive
+                            ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]'
+                            : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
+                        }`}
+                        title="Trình chiếu theo từng câu ngắn"
+                      >
+                        📝 Câu (Sentence)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchGranularity('paragraph')}
+                        className={`px-2.5 py-1 text-xs font-mono font-black uppercase border-l border-black transition-all ${
+                          stagedGranularity === 'paragraph' && !isFullReviewActive
+                            ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]'
+                            : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
+                        }`}
+                        title="Trình chiếu theo từng đoạn văn dài"
+                      >
+                        📄 Đoạn (Paragraph)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nút Xem lại toàn bộ bài đọc (Full Text Review Mode - Requirement 6) */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleToggleFullReview}
+                      className={`neo-btn-sm px-2.5 py-1 text-xs font-mono font-black uppercase flex items-center gap-1.5 transition-all ${
+                        isFullReviewActive
+                          ? 'bg-[#00D2FF] text-black ring-2 ring-black font-black'
+                          : 'bg-white text-black hover:bg-neutral-100'
+                      }`}
+                      title="Hiển thị toàn bộ bài đọc không giới hạn thời gian cho học sinh ôn tập và thảo luận"
+                    >
+                      <BookOpen size={13} />
+                      <span>{isFullReviewActive ? 'Đang bật Review Toàn bài' : '📖 Xem lại toàn bộ bài đọc'}</span>
+                    </button>
+
+                    {isFullReviewActive && (
+                      <button
+                        type="button"
+                        onClick={handleExitFullReview}
+                        className="neo-btn-sm px-2 py-1 bg-[#FF3838] text-white text-xs font-mono font-bold uppercase hover:bg-red-600"
+                        title="Thoát chế độ Review toàn bài để trở về từng câu/đoạn"
+                      >
+                        ✕ Thoát
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Nội dung câu hiện tại (Reading Text Display: Chữ to, rõ ràng) */}
-                <div className="p-4 sm:p-6 bg-paper-reading border-2 border-black min-h-[140px] flex items-center justify-center text-center shadow-[2px_2px_0px_#000] relative">
-                  {stagedText ? (
-                    <p className="font-reading text-xl sm:text-2xl md:text-3xl font-medium leading-relaxed sm:leading-loose text-[#111111]">
-                      {stagedSlices.map((slice, i) =>
-                        slice.isHighlight ? (
-                          <mark
-                            key={i}
-                            className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block shadow-[1px_1px_0px_#000]"
-                            title={slice.annotation?.meaning}
-                          >
-                            {slice.text}
-                          </mark>
-                        ) : (
-                          <span key={i}>{slice.text}</span>
-                        )
-                      )}
-                    </p>
+                {/* Nội dung câu / đoạn / toàn bài hiện tại (Reading Text Display: Chữ to, rõ ràng) */}
+                <div className="p-4 sm:p-6 bg-paper-reading border-2 border-black min-h-[140px] flex flex-col items-center justify-center text-center shadow-[2px_2px_0px_#000] relative">
+                  {isFullReviewActive ? (
+                    /* Full Text Review Mode Display */
+                    <div className="w-full text-left space-y-3 py-2 max-h-[340px] overflow-y-auto pr-1 select-text">
+                      <div className="bg-[#FFE500] border border-black p-2 text-xs font-mono font-bold flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <BookOpen size={14} /> Toàn bộ bài đọc (Chế độ Ôn tập & Thảo luận)
+                        </span>
+                        <span className="bg-white px-1.5 py-0.5 border border-black text-[10px] uppercase">
+                          Không giới hạn thời gian
+                        </span>
+                      </div>
+                      <div className="font-reading text-lg sm:text-xl leading-relaxed text-[#111111] space-y-4">
+                        {activePresentedResource.canonicalText.split(/\n\s*\n/).map((para, pIdx) => {
+                          const paraSlices = buildRenderSlices(
+                            para,
+                            stagedHighlight
+                              ? activePresentedResource.annotations
+                                  .filter(a => a.status === 'approved')
+                                  .map(a => ({
+                                    id: a.id,
+                                    text: a.text,
+                                    startOffset: a.startOffset,
+                                    endOffset: a.endOffset,
+                                    type: a.type,
+                                    meaning: a.meaning,
+                                  }))
+                              : []
+                          );
+                          return (
+                            <p key={pIdx}>
+                              {paraSlices.map((slice, sIdx) =>
+                                slice.isHighlight ? (
+                                  <mark
+                                    key={sIdx}
+                                    className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block shadow-[1px_1px_0px_#000]"
+                                    title={slice.annotation?.meaning}
+                                  >
+                                    {slice.text}
+                                  </mark>
+                                ) : (
+                                  <span key={sIdx}>{slice.text}</span>
+                                )
+                              )}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : stagedText ? (
+                    <>
+                      <p className="font-reading text-xl sm:text-2xl md:text-3xl font-medium leading-relaxed sm:leading-loose text-[#111111]">
+                        {stagedSlices.map((slice, i) =>
+                          slice.isHighlight ? (
+                            <mark
+                              key={i}
+                              className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block shadow-[1px_1px_0px_#000]"
+                              title={slice.annotation?.meaning}
+                            >
+                              {slice.text}
+                            </mark>
+                          ) : (
+                            <span key={i}>{slice.text}</span>
+                          )
+                        )}
+                      </p>
+
+                      {/* Dynamic pacing calibration tag (Requirement 7) */}
+                      <div className="mt-3 pt-2 border-t border-black/10 w-full flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono text-neutral-600">
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={12} className="text-black" />
+                          <span>Thời gian giữ chữ: <b>{(dynamicHoldInfo.holdDurationMs / 1000).toFixed(1)}s</b></span>
+                          {dynamicPacingEnabled && (
+                            <span className="bg-[#FFFDF0] px-1 border border-black text-[10px] text-black font-bold">
+                              ⚡ {dynamicHoldInfo.wordCount} từ {dynamicHoldInfo.isAdjusted ? `(${dynamicHoldInfo.adjustedDiffMs > 0 ? '+' : ''}${(dynamicHoldInfo.adjustedDiffMs / 1000).toFixed(1)}s tự điều chỉnh)` : '(chuẩn)'}
+                            </span>
+                          )}
+                        </div>
+                        {autoMergeShortUnits && (
+                          <span className="text-[10px] text-neutral-500">
+                            (Đã bật gộp câu ngắn &lt; {minWordsPerUnit} từ)
+                          </span>
+                        )}
+                      </div>
+                    </>
                   ) : (
                     <span className="text-neutral-400 font-mono text-sm italic">
                       Không có nội dung câu
@@ -1303,28 +1670,30 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
                 {/* Thanh Điều hướng & Slide Remote HUD nằm NGAY DƯỚI nội dung câu */}
                 <div className="space-y-3 pt-1">
-                  {/* Hàng 1: Nút ← Câu trước | Câu X / Y | Câu tiếp → */}
+                  {/* Hàng 1: Nút ← Đơn vị trước | Đơn vị X / Y | Đơn vị tiếp → */}
                   <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-neutral-50 border border-black">
                     <button
                       type="button"
-                      disabled={stagedUnitIndex <= 0}
+                      disabled={stagedUnitIndex <= 0 || isFullReviewActive}
                       onClick={handlePreviousSentenceOnly}
                       className="neo-btn-sm px-3 py-1 bg-white text-black text-xs font-bold disabled:opacity-40"
                     >
-                      <ChevronLeft size={14} className="inline mr-1" /> Câu trước
+                      <ChevronLeft size={14} className="inline mr-1" /> {stagedGranularity === 'paragraph' ? 'Đoạn' : 'Câu'} trước
                     </button>
 
                     <span className="font-mono text-xs font-black uppercase text-black">
-                      Câu {stagedUnitIndex + 1} / {currentUnitsList.length}
+                      {isFullReviewActive
+                        ? 'Review Toàn bài'
+                        : `${stagedGranularity === 'paragraph' ? 'Đoạn' : 'Câu'} ${stagedUnitIndex + 1} / ${currentUnitsList.length}`}
                     </span>
 
                     <button
                       type="button"
-                      disabled={stagedUnitIndex >= currentUnitsList.length - 1}
+                      disabled={stagedUnitIndex >= currentUnitsList.length - 1 || isFullReviewActive}
                       onClick={handleNextSentenceOnly}
                       className="neo-btn-sm px-3 py-1 bg-white text-black text-xs font-bold disabled:opacity-40"
                     >
-                      Câu tiếp <ChevronRight size={14} className="inline ml-1" />
+                      {stagedGranularity === 'paragraph' ? 'Đoạn' : 'Câu'} tiếp <ChevronRight size={14} className="inline ml-1" />
                     </button>
                   </div>
 
@@ -1482,164 +1851,449 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               )}
             </div>
 
-            {/* Right Column: lg:col-span-4 (~30% width - Minimal Settings Sidebar) */}
-            <div className="lg:col-span-4 space-y-4">
-              {/* Card 1: Đổi bài học nhanh (Quick Switch Lesson) */}
-              <div className="neo-box-sm bg-white p-3.5 space-y-3">
-                <div className="flex items-center justify-between border-b border-black pb-2">
-                  <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
-                    <RefreshCw size={14} className="text-[#FF3838]" />
-                    <span>Đổi bài học nhanh</span>
-                  </div>
+            {/* Right Column: lg:col-span-4 (~30% width) with Icon Tab Navigation (Requirement 4) */}
+            <div className="lg:col-span-4 space-y-3">
+              {/* Icon Navigation Bar (Requirement 4) */}
+              <div className="bg-white border-2 border-black p-1 shadow-[2px_2px_0px_#000]">
+                <div className="grid grid-cols-4 gap-1">
                   <button
                     type="button"
-                    onClick={() => setActiveMainTab('library')}
-                    className="text-[10px] font-mono text-neutral-600 underline font-bold hover:text-black"
+                    onClick={() => setSettingsTab('timings')}
+                    className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                      settingsTab === 'timings'
+                        ? 'bg-[#FFE500] text-black border-black shadow-[1px_1px_0px_#000]'
+                        : 'bg-white text-neutral-600 border-transparent hover:border-black/30 hover:text-black'
+                    }`}
+                    title="Cài đặt trình chiếu & Thời gian (Sentence vs Paragraph)"
                   >
-                    Mở thư viện →
+                    <Sliders size={14} className="shrink-0" />
+                    <span className="hidden sm:inline">Cài đặt</span>
                   </button>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-mono font-bold uppercase text-neutral-600">
-                    Chọn bài đọc từ thư viện:
-                  </label>
-                  <select
-                    value={selectedQuickSwitchId || activePresentedResource.id}
-                    onChange={e => setSelectedQuickSwitchId(e.target.value)}
-                    className="neo-input w-full text-xs py-1.5 font-bold"
-                  >
-                    {resources.map(r => (
-                      <option key={r.id} value={r.id}>
-                        {r.title} ({r.sentences?.length || 0} câu - {r.level})
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Target resource summary */}
-                  {(() => {
-                    const targetRes = resources.find(
-                      r => r.id === (selectedQuickSwitchId || activePresentedResource.id)
-                    );
-                    if (!targetRes) return null;
-                    const isCurrent = targetRes.id === activePresentedResource.id;
-                    return (
-                      <div className="p-2 bg-[#FFFDF0] border border-black/30 text-xs font-mono space-y-1">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-bold text-black truncate max-w-[170px]">{targetRes.title}</span>
-                          {isCurrent ? (
-                            <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
-                              ĐANG CHIẾU
-                            </span>
-                          ) : (
-                            <span className="text-neutral-500 text-[10px]">{targetRes.level}</span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-neutral-600 line-clamp-2 font-reading">
-                          {targetRes.canonicalText}
-                        </p>
-                      </div>
-                    );
-                  })()}
 
                   <button
                     type="button"
-                    onClick={() => {
-                      const targetRes = resources.find(
-                        r => r.id === (selectedQuickSwitchId || activePresentedResource.id)
-                      );
-                      if (targetRes) {
-                        handleOpenClassroom(targetRes);
-                      }
-                    }}
-                    className="neo-btn w-full py-2 bg-[#4ADE80] text-black text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-green-400"
+                    onClick={() => setSettingsTab('switch_lesson')}
+                    className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                      settingsTab === 'switch_lesson'
+                        ? 'bg-[#4ADE80] text-black border-black shadow-[1px_1px_0px_#000]'
+                        : 'bg-white text-neutral-600 border-transparent hover:border-black/30 hover:text-black'
+                    }`}
+                    title="Đổi bài học nhanh từ thư viện"
                   >
-                    <RefreshCw size={13} />
-                    <span>Chuyển sang bài này ngay</span>
+                    <BookOpen size={14} className="shrink-0" />
+                    <span className="hidden sm:inline">Đổi bài</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSettingsTab('participants')}
+                    className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border transition-all relative ${
+                      settingsTab === 'participants'
+                        ? 'bg-[#00D2FF] text-black border-black shadow-[1px_1px_0px_#000]'
+                        : 'bg-white text-neutral-600 border-transparent hover:border-black/30 hover:text-black'
+                    }`}
+                    title="Học sinh & Mã phòng"
+                  >
+                    <Users size={14} className="shrink-0" />
+                    <span className="hidden sm:inline">Học sinh</span>
+                    {participants.length > 0 && (
+                      <span className="neo-badge bg-[#FF3838] text-white text-[9px] py-0 px-1 font-bold absolute -top-1 -right-1">
+                        {participants.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSettingsTab('all')}
+                    className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                      settingsTab === 'all'
+                        ? 'bg-black text-white border-black shadow-[1px_1px_0px_#000]'
+                        : 'bg-white text-neutral-600 border-transparent hover:border-black/30 hover:text-black'
+                    }`}
+                    title="Xem tất cả thẻ dọc"
+                  >
+                    <LayoutGrid size={14} className="shrink-0" />
+                    <span className="hidden sm:inline">Tất cả</span>
                   </button>
                 </div>
               </div>
 
-              {/* Card 2: Cài đặt nhanh (Minimal Settings) */}
-              <div className="neo-box-sm bg-white p-3.5 space-y-3">
-                <div className="flex items-center justify-between border-b border-black pb-2">
-                  <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
-                    <Sliders size={14} className="text-black" />
-                    <span>Cài đặt trình chiếu</span>
+              {/* Card 1: Cài đặt trình chiếu (Timings & Advanced Engine - Requirements 4, 6, 7) */}
+              {(settingsTab === 'timings' || settingsTab === 'all') && (
+                <div className="neo-box-sm bg-white p-3.5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-black pb-2">
+                    <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
+                      <Sliders size={14} className="text-black" />
+                      <span>Cài đặt trình chiếu</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyToRoom}
+                      disabled={isApplying}
+                      className="neo-btn-sm px-2.5 py-0.5 bg-[#FFE500] text-black text-[10px] font-bold"
+                      title="Lưu cài đặt và đồng bộ với học sinh"
+                    >
+                      {isApplying ? 'Lưu...' : 'Lưu cài đặt'}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleApplyToRoom}
-                    disabled={isApplying}
-                    className="neo-btn-sm px-2 py-0.5 bg-[#FFE500] text-black text-[10px] font-bold"
-                    title="Lưu cài đặt vào phòng"
-                  >
-                    {isApplying ? 'Lưu...' : 'Lưu cài đặt'}
-                  </button>
-                </div>
 
-                <div className="space-y-2.5">
-                  {/* Giữ chữ Hold (1s - 10s) */}
-                  <div>
-                    <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
-                      <span>Thời gian giữ chữ (Hold):</span>
-                      <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
-                        {(stagedHoldMs / 1000).toFixed(1)}s
+                  {/* Chế độ hiện tại: Câu vs Đoạn */}
+                  <div className="flex items-center justify-between p-2 bg-[#FFFDF0] border border-black text-xs font-mono">
+                    <span className="font-bold text-black uppercase text-[11px]">Đang chiếu:</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchGranularity('sentence')}
+                        className={`px-2 py-0.5 font-bold uppercase text-[10px] border border-black transition-colors ${
+                          stagedGranularity === 'sentence' ? 'bg-[#FFE500] shadow-[1px_1px_0px_#000]' : 'bg-white hover:bg-neutral-100'
+                        }`}
+                      >
+                        📝 Câu
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchGranularity('paragraph')}
+                        className={`px-2 py-0.5 font-bold uppercase text-[10px] border border-black transition-colors ${
+                          stagedGranularity === 'paragraph' ? 'bg-[#FFE500] shadow-[1px_1px_0px_#000]' : 'bg-white hover:bg-neutral-100'
+                        }`}
+                      >
+                        📄 Đoạn
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Requirement 6: Cài đặt thời gian riêng biệt cho Câu & Đoạn */}
+                  <div className="border border-black p-2.5 bg-white space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-black/20 pb-1.5">
+                      <span className="text-[11px] font-mono font-black uppercase text-black flex items-center gap-1">
+                        <Clock size={12} />
+                        <span>Thời gian (Hold & Erase):</span>
+                      </span>
+                      <div className="flex border border-black text-[10px] font-mono font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setTimingProfileTab('sentence')}
+                          className={`px-1.5 py-0.5 transition-colors ${
+                            timingProfileTab === 'sentence' ? 'bg-[#FFE500] font-black' : 'bg-white text-neutral-600 hover:text-black'
+                          }`}
+                        >
+                          Cài Câu
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTimingProfileTab('paragraph')}
+                          className={`px-1.5 py-0.5 border-l border-black transition-colors ${
+                            timingProfileTab === 'paragraph' ? 'bg-[#FFE500] font-black' : 'bg-white text-neutral-600 hover:text-black'
+                          }`}
+                        >
+                          Cài Đoạn
+                        </button>
+                      </div>
+                    </div>
+
+                    {timingProfileTab === 'sentence' ? (
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-mono text-neutral-600 flex items-center justify-between">
+                          <span>Đang cài: <b>Thời gian Câu</b></span>
+                          {stagedGranularity === 'sentence' ? (
+                            <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
+                              Đang áp dụng
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-neutral-400">Sẽ áp dụng khi chọn Câu</span>
+                          )}
+                        </div>
+
+                        {/* Giữ chữ câu */}
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
+                            <span>Giữ chữ câu (Hold):</span>
+                            <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
+                              {(stagedSentenceHoldMs / 1000).toFixed(1)}s
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min={1000}
+                              max={10000}
+                              step={500}
+                              value={stagedSentenceHoldMs}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setStagedSentenceHoldMs(val);
+                                if (stagedGranularity === 'sentence') setStagedHoldMs(val);
+                              }}
+                              className="w-full accent-black cursor-pointer"
+                            />
+                            <input
+                              type="number"
+                              min={1000}
+                              max={10000}
+                              step={500}
+                              value={stagedSentenceHoldMs}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setStagedSentenceHoldMs(val);
+                                if (stagedGranularity === 'sentence') setStagedHoldMs(val);
+                              }}
+                              className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Xóa chữ câu */}
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
+                            <span>Xóa chữ câu (Erase):</span>
+                            <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
+                              {(stagedSentenceEraseMs / 1000).toFixed(1)}s
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min={500}
+                              max={5000}
+                              step={250}
+                              value={stagedSentenceEraseMs}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setStagedSentenceEraseMs(val);
+                                if (stagedGranularity === 'sentence') setStagedEraseMs(val);
+                              }}
+                              className="w-full accent-black cursor-pointer"
+                            />
+                            <input
+                              type="number"
+                              min={500}
+                              max={5000}
+                              step={250}
+                              value={stagedSentenceEraseMs}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setStagedSentenceEraseMs(val);
+                                if (stagedGranularity === 'sentence') setStagedEraseMs(val);
+                              }}
+                              className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-mono text-neutral-600 flex items-center justify-between">
+                          <span>Đang cài: <b>Thời gian Đoạn</b></span>
+                          {stagedGranularity === 'paragraph' ? (
+                            <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
+                              Đang áp dụng
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-neutral-400">Sẽ áp dụng khi chọn Đoạn</span>
+                          )}
+                        </div>
+
+                        {/* Giữ chữ đoạn */}
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
+                            <span>Giữ chữ đoạn (Hold):</span>
+                            <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
+                              {(stagedParagraphHoldMs / 1000).toFixed(1)}s
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min={3000}
+                              max={30000}
+                              step={500}
+                              value={stagedParagraphHoldMs}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setStagedParagraphHoldMs(val);
+                                if (stagedGranularity === 'paragraph') setStagedHoldMs(val);
+                              }}
+                              className="w-full accent-black cursor-pointer"
+                            />
+                            <input
+                              type="number"
+                              min={3000}
+                              max={30000}
+                              step={500}
+                              value={stagedParagraphHoldMs}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setStagedParagraphHoldMs(val);
+                                if (stagedGranularity === 'paragraph') setStagedHoldMs(val);
+                              }}
+                              className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Xóa chữ đoạn */}
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
+                            <span>Xóa chữ đoạn (Erase):</span>
+                            <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
+                              {(stagedParagraphEraseMs / 1000).toFixed(1)}s
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min={1000}
+                              max={8000}
+                              step={250}
+                              value={stagedParagraphEraseMs}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setStagedParagraphEraseMs(val);
+                                if (stagedGranularity === 'paragraph') setStagedEraseMs(val);
+                              }}
+                              className="w-full accent-black cursor-pointer"
+                            />
+                            <input
+                              type="number"
+                              min={1000}
+                              max={8000}
+                              step={250}
+                              value={stagedParagraphEraseMs}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setStagedParagraphEraseMs(val);
+                                if (stagedGranularity === 'paragraph') setStagedEraseMs(val);
+                              }}
+                              className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Requirement 7: Nâng cao - Tính toán độ dài câu/đoạn & Cơ chế gộp câu ngắn */}
+                  <div className="p-2.5 bg-[#FFFDF0] border border-black space-y-2 text-xs font-mono">
+                    <div className="font-bold uppercase text-[11px] text-black flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Sparkles size={13} className="text-[#00D2FF]" />
+                        <span>Hiệu chỉnh thông minh (Advanced):</span>
+                      </span>
+                      <span className="neo-badge bg-[#00D2FF] text-black text-[9px] py-0 px-1 font-bold">
+                        AI Pacing
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Toggle Dynamic Pacing */}
+                    <label className="flex items-center gap-2 cursor-pointer font-bold select-none text-[11px]">
                       <input
-                        type="range"
-                        min={1000}
-                        max={10000}
-                        step={500}
-                        value={stagedHoldMs}
-                        onChange={e => setStagedHoldMs(Number(e.target.value))}
-                        className="w-full accent-black cursor-pointer"
+                        type="checkbox"
+                        checked={dynamicPacingEnabled}
+                        onChange={e => setDynamicPacingEnabled(e.target.checked)}
+                        className="w-4 h-4 accent-black cursor-pointer"
                       />
-                      <input
-                        type="number"
-                        min={1000}
-                        max={10000}
-                        step={500}
-                        value={stagedHoldMs}
-                        onChange={e => setStagedHoldMs(Number(e.target.value))}
-                        className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
-                      />
+                      <span>Bù trừ thời gian theo độ dài (Dynamic Pacing)</span>
+                    </label>
+
+                    {dynamicPacingEnabled && (
+                      <div className="pl-6 space-y-1.5 text-[10px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-neutral-600">Tốc độ đọc mẫu:</span>
+                          <div className="flex gap-1">
+                            {[
+                              { wpm: 120, label: '120 Chậm' },
+                              { wpm: 160, label: '160 Chuẩn' },
+                              { wpm: 200, label: '200 Nhanh' },
+                            ].map(item => (
+                              <button
+                                key={item.wpm}
+                                type="button"
+                                onClick={() => setReadingWpm(item.wpm)}
+                                className={`px-1.5 py-0.5 border text-[10px] font-bold ${
+                                  readingWpm === item.wpm
+                                    ? 'bg-black text-white border-black'
+                                    : 'bg-white text-black border-black/40 hover:border-black'
+                                }`}
+                              >
+                                {item.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {stagedText && (
+                          <div className="p-1.5 bg-white border border-black/30 text-[10px] text-neutral-800">
+                            Unit #{stagedUnitIndex + 1}: <b>{dynamicHoldInfo.wordCount} từ</b> → Tính toán:{' '}
+                            <b className="font-black text-black">{(dynamicHoldInfo.holdDurationMs / 1000).toFixed(1)}s</b>
+                            {dynamicHoldInfo.isAdjusted && (
+                              <span
+                                className={`ml-1 font-bold ${
+                                  dynamicHoldInfo.adjustedDiffMs > 0 ? 'text-green-700' : 'text-amber-700'
+                                }`}
+                              >
+                                ({dynamicHoldInfo.adjustedDiffMs > 0 ? `+${(dynamicHoldInfo.adjustedDiffMs / 1000).toFixed(1)}s câu dài` : `${(dynamicHoldInfo.adjustedDiffMs / 1000).toFixed(1)}s câu ngắn`})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Toggle Smart Unit Merging */}
+                    <div className="pt-2 border-t border-black/10">
+                      <label className="flex items-center gap-2 cursor-pointer font-bold select-none text-[11px]">
+                        <input
+                          type="checkbox"
+                          checked={autoMergeShortUnits}
+                          onChange={e => setAutoMergeShortUnits(e.target.checked)}
+                          className="w-4 h-4 accent-black cursor-pointer"
+                        />
+                        <span>Tự gộp câu quá ngắn (&lt; min từ)</span>
+                      </label>
+
+                      {autoMergeShortUnits && (
+                        <div className="pl-6 pt-1 space-y-1 text-[10px]">
+                          <div className="flex items-center justify-between">
+                            <span className="text-neutral-600">Ngưỡng tối thiểu:</span>
+                            <span className="font-bold bg-white px-1 border border-black">{minWordsPerUnit} từ</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={3}
+                            max={8}
+                            step={1}
+                            value={minWordsPerUnit}
+                            onChange={e => setMinWordsPerUnit(Number(e.target.value))}
+                            className="w-full accent-black cursor-pointer"
+                          />
+                          <p className="text-neutral-500 italic text-[9px] leading-tight">
+                            Ví dụ: &quot;Stay hungry.&quot; + &quot;Stay foolish.&quot; sẽ gộp thành 1 hiển thị mượt mà.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Thời gian xóa chữ Erase (0.5s - 5s) */}
-                  <div>
-                    <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase mb-1">
-                      <span>Thời gian xóa (Erase):</span>
-                      <span className="text-neutral-700 bg-[#FFFDF0] px-1 border border-black text-[10px]">
-                        {(stagedEraseMs / 1000).toFixed(1)}s
-                      </span>
+                  {/* Mode Review Toàn Bài (Requirement 6) */}
+                  <div className="p-2.5 border border-black bg-[#FFFDF0] flex items-center justify-between text-xs font-mono">
+                    <div>
+                      <div className="font-bold text-black text-[11px]">Xem lại toàn bài (Full Review):</div>
+                      <div className="text-[10px] text-neutral-600">Chiếu toàn văn không đếm ngược</div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min={500}
-                        max={5000}
-                        step={250}
-                        value={stagedEraseMs}
-                        onChange={e => setStagedEraseMs(Number(e.target.value))}
-                        className="w-full accent-black cursor-pointer"
-                      />
-                      <input
-                        type="number"
-                        min={500}
-                        max={5000}
-                        step={250}
-                        value={stagedEraseMs}
-                        onChange={e => setStagedEraseMs(Number(e.target.value))}
-                        className="neo-input text-xs py-0.5 px-1 w-16 text-center font-mono font-bold"
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleFullReview}
+                      className={`neo-btn-sm px-2.5 py-1 text-xs font-bold ${
+                        isFullReviewActive
+                          ? 'bg-[#FF3838] text-white hover:bg-red-600'
+                          : 'bg-[#FFE500] text-black hover:bg-yellow-300'
+                      }`}
+                    >
+                      {isFullReviewActive ? 'Thoát Review' : 'Bật Review'}
+                    </button>
                   </div>
 
-                  {/* Hiệu ứng mới và các tùy chọn tương thích phòng cũ */}
+                  {/* Hiệu ứng xóa chữ */}
                   <div>
                     <label className="block text-[11px] font-mono font-bold uppercase mb-1.5">
                       Hiệu ứng xóa chữ:
@@ -1650,6 +2304,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                           key={eff.id}
                           type="button"
                           onClick={() => setStagedEraseEffect(eff.id)}
+                          aria-pressed={stagedEraseEffect === eff.id}
                           className={`py-1.5 px-2 text-xs font-mono font-bold border transition-all text-center ${
                             stagedEraseEffect === eff.id
                               ? 'bg-[#FFE500] border-black text-black shadow-[1.5px_1.5px_0px_#000]'
@@ -1660,149 +2315,200 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                         </button>
                       ))}
                     </div>
-                    {stagedEraseEffect === 'dust' && <DustDirectionControl angle={stagedDustAngle} onChange={setStagedDustAngle} />}
+                    {stagedEraseEffect === 'dust' && (
+                      <DustDirectionControl angle={stagedDustAngle} onChange={setStagedDustAngle} />
+                    )}
                   </div>
 
-                  {/* Granularity & Highlight mini toggles */}
-                  <div className="pt-2 border-t border-black/10 grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Đơn vị:</span>
-                      <div className="flex border border-black">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStagedGranularity('sentence');
-                            setStagedUnitIndex(0);
-                          }}
-                          className={`flex-1 py-0.5 text-[10px] font-bold uppercase ${
-                            stagedGranularity === 'sentence' ? 'bg-[#FFE500]' : 'bg-white'
-                          }`}
-                        >
-                          Câu
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStagedGranularity('paragraph');
-                            setStagedUnitIndex(0);
-                          }}
-                          className={`flex-1 py-0.5 text-[10px] font-bold uppercase border-l border-black ${
-                            stagedGranularity === 'paragraph' ? 'bg-[#FFE500]' : 'bg-white'
-                          }`}
-                        >
-                          Đoạn
-                        </button>
-                      </div>
+                  {/* Highlights mini toggle */}
+                  <div className="pt-2 border-t border-black/10 flex items-center justify-between text-xs font-mono">
+                    <span className="text-[11px] font-bold uppercase text-neutral-700">Hiển thị Highlights:</span>
+                    <button
+                      type="button"
+                      onClick={() => setStagedHighlight(!stagedHighlight)}
+                      className={`py-1 px-3 border border-black text-[10px] font-bold uppercase flex items-center gap-1.5 ${
+                        stagedHighlight ? 'bg-[#4ADE80] text-black' : 'bg-neutral-200 text-neutral-600'
+                      }`}
+                    >
+                      {stagedHighlight ? <Check size={12} /> : <EyeOff size={12} />}
+                      <span>{stagedHighlight ? 'Bật Highlights' : 'Tắt'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Card 2: Đổi bài học nhanh (Quick Switch Lesson) */}
+              {(settingsTab === 'switch_lesson' || settingsTab === 'all') && (
+                <div className="neo-box-sm bg-white p-3.5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-black pb-2">
+                    <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
+                      <RefreshCw size={14} className="text-[#FF3838]" />
+                      <span>Đổi bài học nhanh</span>
                     </div>
-
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">Highlights:</span>
-                      <button
-                        type="button"
-                        onClick={() => setStagedHighlight(!stagedHighlight)}
-                        className={`w-full py-0.5 border border-black text-[10px] font-bold uppercase flex items-center justify-center gap-1 ${
-                          stagedHighlight ? 'bg-[#4ADE80] text-black' : 'bg-neutral-200 text-neutral-600'
-                        }`}
-                      >
-                        {stagedHighlight ? <Check size={11} /> : <EyeOff size={11} />}
-                        <span>{stagedHighlight ? 'Bật' : 'Tắt'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Thông tin phòng & Kết nối */}
-              <div className="neo-box-sm bg-white p-3.5 space-y-3">
-                <div className="flex items-center justify-between border-b border-black pb-2">
-                  <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
-                    <Users size={14} className="text-black" />
-                    <span>Thông tin phòng & Kết nối</span>
-                  </div>
-                  <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
-                    {participants.length} Online
-                  </span>
-                </div>
-
-                {/* Large Room Code Banner */}
-                <div className="p-2.5 bg-[#FFFDF0] border-2 border-black text-center shadow-[1px_1px_0px_#000]">
-                  <div className="text-[10px] font-mono uppercase text-neutral-500">Mã phòng học sinh:</div>
-                  <div className="text-2xl font-black font-mono tracking-widest text-black mt-0.5">
-                    {activeRoom.id}
-                  </div>
-                </div>
-
-                {/* Copy Link & Student Screen Buttons */}
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={handleCopyLink}
-                    className="neo-btn w-full py-2 bg-white text-black text-xs font-bold uppercase flex items-center justify-center gap-1.5"
-                  >
-                    {copiedLink ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
-                    <span>{copiedLink ? 'Đã chép link học sinh!' : 'Copy Link Học Sinh'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => onOpenLearnerView(activeRoom.id)}
-                    className="neo-btn w-full py-2 bg-[#00D2FF] text-black text-xs font-bold uppercase flex items-center justify-center gap-1.5"
-                  >
-                    <ExternalLink size={13} />
-                    <span>Mở Màn hình học sinh (Tab mới)</span>
-                  </button>
-                </div>
-
-                {/* Danh sách học sinh online */}
-                <div className="pt-2 border-t border-black/15 space-y-1.5">
-                  <div className="text-[11px] font-mono font-bold uppercase text-neutral-700 flex items-center justify-between">
-                    <span>Danh sách học sinh:</span>
-                    <span className="text-[10px] text-neutral-500 font-normal">{participants.length} bạn</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveMainTab('library')}
+                      className="text-[10px] font-mono text-neutral-600 underline font-bold hover:text-black"
+                    >
+                      Mở thư viện →
+                    </button>
                   </div>
 
-                  {participants.length === 0 ? (
-                    <p className="text-[11px] font-mono text-neutral-400 italic">
-                      Chưa có học sinh kết nối. Chia sẻ mã <b>{activeRoom.id}</b> để học sinh tham gia.
-                    </p>
-                  ) : (
-                    <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
-                      {participants.map(p => (
-                        <div
-                          key={p.participantId}
-                          className="px-2 py-1 bg-[#FFFDF0] border border-black/30 flex items-center justify-between text-xs font-mono"
-                        >
-                          <div className="flex items-center gap-1.5 truncate">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block shrink-0"></span>
-                            <span className="font-bold truncate">{p.name}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeParticipant(activeRoom.id, p.participantId)}
-                            className="text-neutral-400 hover:text-red-600 transition-colors shrink-0 ml-1"
-                            title="Ngắt kết nối học sinh này"
-                          >
-                            <UserX size={12} />
-                          </button>
-                        </div>
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-mono font-bold uppercase text-neutral-600">
+                      Chọn bài đọc từ thư viện:
+                    </label>
+                    <select
+                      value={selectedQuickSwitchId || activePresentedResource.id}
+                      onChange={e => setSelectedQuickSwitchId(e.target.value)}
+                      className="neo-input w-full text-xs py-1.5 font-bold"
+                    >
+                      {resources.map(r => (
+                        <option key={r.id} value={r.id}>
+                          {r.title} ({r.sentences?.length || 0} câu - {r.level})
+                        </option>
                       ))}
-                    </div>
-                  )}
-                </div>
+                    </select>
 
-                {/* End Room Button */}
-                <div className="pt-2 border-t border-black/15">
-                  <button
-                    type="button"
-                    onClick={handleEndRoom}
-                    className="neo-btn w-full py-2 bg-white text-[#FF3838] border-2 border-[#FF3838] hover:bg-red-50 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5"
-                  >
-                    <X size={13} />
-                    <span>Kết thúc buổi học</span>
-                  </button>
+                    {/* Target resource summary */}
+                    {(() => {
+                      const targetRes = resources.find(
+                        r => r.id === (selectedQuickSwitchId || activePresentedResource.id)
+                      );
+                      if (!targetRes) return null;
+                      const isCurrent = targetRes.id === activePresentedResource.id;
+                      return (
+                        <div className="p-2 bg-[#FFFDF0] border border-black/30 text-xs font-mono space-y-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-black truncate max-w-[170px]">{targetRes.title}</span>
+                            {isCurrent ? (
+                              <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
+                                ĐANG CHIẾU
+                              </span>
+                            ) : (
+                              <span className="text-neutral-500 text-[10px]">{targetRes.level}</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-neutral-600 line-clamp-2 font-reading">
+                            {targetRes.canonicalText}
+                          </p>
+                        </div>
+                      );
+                    })()}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetRes = resources.find(
+                          r => r.id === (selectedQuickSwitchId || activePresentedResource.id)
+                        );
+                        if (targetRes) {
+                          handleOpenClassroom(targetRes);
+                        }
+                      }}
+                      className="neo-btn w-full py-2 bg-[#4ADE80] text-black text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-green-400"
+                    >
+                      <RefreshCw size={13} />
+                      <span>Chuyển sang bài này ngay</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Card 3: Thông tin phòng & Học sinh Online */}
+              {(settingsTab === 'participants' || settingsTab === 'all') && (
+                <div className="neo-box-sm bg-white p-3.5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-black pb-2">
+                    <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
+                      <Users size={14} className="text-black" />
+                      <span>Thông tin phòng & Kết nối</span>
+                    </div>
+                    <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
+                      {participants.length} Online
+                    </span>
+                  </div>
+
+                  {/* Large Room Code Banner */}
+                  <div className="p-2.5 bg-[#FFFDF0] border-2 border-black text-center shadow-[1px_1px_0px_#000]">
+                    <div className="text-[10px] font-mono uppercase text-neutral-500">Mã phòng học sinh:</div>
+                    <div className="text-2xl font-black font-mono tracking-widest text-black mt-0.5">
+                      {activeRoom.id}
+                    </div>
+                  </div>
+
+                  {/* Copy Link & Student Screen Buttons (Dedicated Endpoint: /student?room=CH-XXXX) */}
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="neo-btn w-full py-2 bg-white text-black text-xs font-bold uppercase flex items-center justify-center gap-1.5"
+                    >
+                      {copiedLink ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
+                      <span>{copiedLink ? 'Đã chép link học sinh!' : 'Copy Link Học Sinh (/student)'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenLearnerView(activeRoom.id)}
+                      className="neo-btn w-full py-2 bg-[#00D2FF] text-black text-xs font-bold uppercase flex items-center justify-center gap-1.5"
+                    >
+                      <ExternalLink size={13} />
+                      <span>Mở Màn hình học sinh (Tab mới)</span>
+                    </button>
+                  </div>
+
+                  {/* Danh sách học sinh online */}
+                  <div className="pt-2 border-t border-black/15 space-y-1.5">
+                    <div className="text-[11px] font-mono font-bold uppercase text-neutral-700 flex items-center justify-between">
+                      <span>Danh sách học sinh:</span>
+                      <span className="text-[10px] text-neutral-500 font-normal">{participants.length} bạn</span>
+                    </div>
+
+                    {participants.length === 0 ? (
+                      <p className="text-[11px] font-mono text-neutral-400 italic">
+                        Chưa có học sinh kết nối. Chia sẻ mã <b>{activeRoom.id}</b> để học sinh tham gia.
+                      </p>
+                    ) : (
+                      <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
+                        {participants.map(p => (
+                          <div
+                            key={p.participantId}
+                            className="px-2 py-1 bg-[#FFFDF0] border border-black/30 flex items-center justify-between text-xs font-mono"
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block shrink-0"></span>
+                              <span className="font-bold truncate">{p.name}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeParticipant(activeRoom.id, p.participantId)}
+                              className="text-neutral-400 hover:text-red-600 transition-colors shrink-0 ml-1"
+                              title="Ngắt kết nối học sinh này"
+                            >
+                              <UserX size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* End Room Button */}
+                  <div className="pt-2 border-t border-black/15">
+                    <button
+                      type="button"
+                      onClick={handleEndRoom}
+                      className="neo-btn w-full py-2 bg-white text-[#FF3838] border-2 border-[#FF3838] hover:bg-red-50 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5"
+                    >
+                      <X size={13} />
+                      <span>Kết thúc buổi học</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+
         ) : (
           /* NO ACTIVE ROOM: STREAMLINED SETUP SCREEN */
           <div className="neo-box bg-white p-6 sm:p-10 max-w-2xl mx-auto space-y-6">

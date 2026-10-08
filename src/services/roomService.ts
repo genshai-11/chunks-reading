@@ -40,6 +40,19 @@ export function generateRoomCode(): string {
   return result;
 }
 
+export interface RoomConfigOptions {
+  sentenceHoldMs?: number;
+  sentenceEraseMs?: number;
+  paragraphHoldMs?: number;
+  paragraphEraseMs?: number;
+  isFullReview?: boolean;
+  dynamicPacingEnabled?: boolean;
+  readingWpm?: number;
+  autoMergeShortUnits?: boolean;
+  minWordsPerUnit?: number;
+  customUnitsList?: string[];
+}
+
 /**
  * Creates a new active classroom room.
  */
@@ -53,18 +66,20 @@ export async function createClassroomRoom(
   eraseDurationMs: number = 1000,
   totalWindowMs: number = 3000,
   eraseEffect: EraseEffect = 'dissolve',
-  dustAngle: number = DEFAULT_DUST_ANGLE
+  dustAngle: number = DEFAULT_DUST_ANGLE,
+  options?: RoomConfigOptions
 ): Promise<ClassroomRoom> {
   const teacherUid = auth.currentUser?.uid;
   if (!teacherUid) throw new Error('Teacher must be signed in to open a classroom');
 
   const roomId = generateRoomCode();
-  const units = granularity === 'sentence' ? resource.sentences : resource.paragraphs;
+  const rawUnits = granularity === 'sentence' ? resource.sentences : resource.paragraphs;
+  const units = options?.customUnitsList && options.customUnitsList.length > 0 ? options.customUnitsList : rawUnits;
   const initialText = units[0] || '';
 
   // Extract only approved annotations for unit 0
   const approvedAnnotations: ApprovedSpan[] = (resource.annotations || [])
-    .filter(a => a.status === 'approved' && a.unitIndex === 0 && a.unitType === granularity)
+    .filter(a => a.status === 'approved' && (a.unitIndex === 0 || initialText.includes(a.text)))
     .map(a => ({
       id: a.id || `ann-${Date.now()}`,
       text: a.text || '',
@@ -80,6 +95,7 @@ export async function createClassroomRoom(
     granularity,
     text: initialText,
     annotations: approvedAnnotations,
+    isFullReview: false,
   };
 
   const roomData: ClassroomRoom = {
@@ -97,6 +113,15 @@ export async function createClassroomRoom(
     holdDurationMs,
     eraseDurationMs,
     totalWindowMs,
+    sentenceHoldMs: options?.sentenceHoldMs ?? (granularity === 'sentence' ? holdDurationMs : 3500),
+    sentenceEraseMs: options?.sentenceEraseMs ?? (granularity === 'sentence' ? eraseDurationMs : 1000),
+    paragraphHoldMs: options?.paragraphHoldMs ?? (granularity === 'paragraph' ? holdDurationMs : 12000),
+    paragraphEraseMs: options?.paragraphEraseMs ?? (granularity === 'paragraph' ? eraseDurationMs : 2500),
+    isFullReview: false,
+    dynamicPacingEnabled: options?.dynamicPacingEnabled ?? true,
+    readingWpm: options?.readingWpm ?? 160,
+    autoMergeShortUnits: options?.autoMergeShortUnits ?? false,
+    minWordsPerUnit: options?.minWordsPerUnit ?? 5,
     playbackStatus: 'idle', // Starts idle/blank waiting
     currentUnit: initialUnit,
     serverStartTime: null,
@@ -197,14 +222,16 @@ export async function applyToRoomCommand(
   eraseDurationMs: number,
   totalWindowMs: number,
   eraseEffect: EraseEffect = 'dissolve',
-  dustAngle: number = DEFAULT_DUST_ANGLE
+  dustAngle: number = DEFAULT_DUST_ANGLE,
+  options?: RoomConfigOptions
 ): Promise<void> {
-  const units = granularity === 'sentence' ? resource.sentences : resource.paragraphs;
+  const rawUnits = granularity === 'sentence' ? resource.sentences : resource.paragraphs;
+  const units = options?.customUnitsList && options.customUnitsList.length > 0 ? options.customUnitsList : rawUnits;
   const safeIndex = Math.max(0, Math.min(unitIndex, units.length - 1));
   const unitText = units[safeIndex] || '';
 
   const approvedAnnotations: ApprovedSpan[] = (resource.annotations || [])
-    .filter(a => a.status === 'approved' && a.unitIndex === safeIndex && a.unitType === granularity)
+    .filter(a => a.status === 'approved' && (a.unitIndex === safeIndex || unitText.includes(a.text)))
     .map(a => ({
       id: a.id || `ann-${Date.now()}`,
       text: a.text || '',
@@ -220,11 +247,12 @@ export async function applyToRoomCommand(
     granularity,
     text: unitText,
     annotations: approvedAnnotations,
+    isFullReview: false,
   };
 
   try {
     const ref = doc(db, ROOMS_COLLECTION, roomId);
-    await updateDoc(ref, {
+    const updatePayload: Record<string, any> = {
       resourceId: resource.id,
       resourceTitle: resource.title,
       granularity,
@@ -239,9 +267,80 @@ export async function applyToRoomCommand(
       playbackStatus: 'idle', // Staged changes return learners to blank waiting
       serverStartTime: null,
       pausedElapsedMs: 0,
+      isFullReview: false,
       revision: currentRevision + 1,
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    if (options?.sentenceHoldMs !== undefined) updatePayload.sentenceHoldMs = options.sentenceHoldMs;
+    if (options?.sentenceEraseMs !== undefined) updatePayload.sentenceEraseMs = options.sentenceEraseMs;
+    if (options?.paragraphHoldMs !== undefined) updatePayload.paragraphHoldMs = options.paragraphHoldMs;
+    if (options?.paragraphEraseMs !== undefined) updatePayload.paragraphEraseMs = options.paragraphEraseMs;
+    if (options?.dynamicPacingEnabled !== undefined) updatePayload.dynamicPacingEnabled = options.dynamicPacingEnabled;
+    if (options?.readingWpm !== undefined) updatePayload.readingWpm = options.readingWpm;
+    if (options?.autoMergeShortUnits !== undefined) updatePayload.autoMergeShortUnits = options.autoMergeShortUnits;
+    if (options?.minWordsPerUnit !== undefined) updatePayload.minWordsPerUnit = options.minWordsPerUnit;
+
+    await updateDoc(ref, updatePayload);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, `${ROOMS_COLLECTION}/${roomId}`);
+  }
+}
+
+/**
+ * Toggle Full Text Review mode: displays the entire reading text indefinitely until teacher hides or exits.
+ */
+export async function setFullReviewCommand(
+  roomId: string,
+  currentRevision: number,
+  resource: ReadingResource,
+  isReview: boolean
+): Promise<void> {
+  try {
+    const ref = doc(db, ROOMS_COLLECTION, roomId);
+
+    if (isReview) {
+      // Collect all approved spans for the full text
+      const allApproved: ApprovedSpan[] = (resource.annotations || [])
+        .filter(a => a.status === 'approved')
+        .map(a => ({
+          id: a.id || `ann-${Date.now()}`,
+          text: a.text || '',
+          startOffset: a.startOffset || 0,
+          endOffset: a.endOffset || 0,
+          type: a.type || 'collocation',
+          meaning: a.meaning || '',
+        }));
+
+      const fullUnit: CurrentUnitPayload = {
+        index: 0,
+        totalUnits: 1,
+        granularity: 'paragraph',
+        text: resource.canonicalText,
+        annotations: allApproved,
+        isFullReview: true,
+      };
+
+      await updateDoc(ref, {
+        isFullReview: true,
+        playbackStatus: 'manual_show',
+        currentUnit: fullUnit,
+        serverStartTime: null,
+        pausedElapsedMs: 0,
+        revision: currentRevision + 1,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      // Exit full review back to idle
+      await updateDoc(ref, {
+        isFullReview: false,
+        playbackStatus: 'idle',
+        serverStartTime: null,
+        pausedElapsedMs: 0,
+        revision: currentRevision + 1,
+        updatedAt: serverTimestamp(),
+      });
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, `${ROOMS_COLLECTION}/${roomId}`);
   }

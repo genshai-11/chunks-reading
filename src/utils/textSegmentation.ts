@@ -161,3 +161,54 @@ export function buildRenderSlices(text: string, approvedSpans: ApprovedSpan[]): 
 
   return slices;
 }
+
+export interface MergeUnitsOptions {
+  minWords?: number; // Minimum words per reading chunk (default 5)
+  minChars?: number; // Minimum characters per chunk (default 25)
+}
+
+/**
+ * Intelligently merges consecutive units (sentences or paragraphs) that are too short
+ * so learners don't get awkward 1-2 word fragments (e.g. "Stay hungry." + "Stay foolish.").
+ */
+export function mergeShortUnits(units: string[], options: MergeUnitsOptions = {}): string[] {
+  if (!units || units.length <= 1) return units || [];
+  const minWords = options.minWords ?? 5;
+  const minChars = options.minChars ?? 25;
+
+  const result: string[] = [];
+  let buffer = '';
+
+  for (let i = 0; i < units.length; i++) {
+    const current = (units[i] || '').trim();
+    if (!current) continue;
+
+    if (!buffer) {
+      buffer = current;
+    } else {
+      buffer = `${buffer} ${current}`;
+    }
+
+    const wordCount = buffer.split(/\s+/).filter(Boolean).length;
+    const isLast = i === units.length - 1;
+
+    // Check if buffer now meets the min criteria
+    if (wordCount >= minWords && buffer.length >= minChars) {
+      result.push(buffer);
+      buffer = '';
+    } else if (isLast) {
+      // If we are at the very end and buffer is still short:
+      // If we already have accumulated previous chunks, merge buffer into the last chunk
+      // so learners aren't left with an isolated 2-word fragment.
+      if (result.length > 0) {
+        result[result.length - 1] = `${result[result.length - 1]} ${buffer}`;
+      } else {
+        result.push(buffer);
+      }
+      buffer = '';
+    }
+  }
+
+  return result.length > 0 ? result : units;
+}
+

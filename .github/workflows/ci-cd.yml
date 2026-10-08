@@ -37,7 +37,7 @@ jobs:
           VITE_FIREBASE_PROJECT_ID: "gen-lang-client-0589169162"
 
       - name: Deploy to Firebase Hosting
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/firebase-e2e-classroom-deploy'
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/firebase-e2e-classroom-deploy') && secrets.FIREBASE_SERVICE_ACCOUNT_GEN_LANG_CLIENT_0589169162 != ''
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'

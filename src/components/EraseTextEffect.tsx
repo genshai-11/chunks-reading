@@ -47,7 +47,7 @@ export function EraseTextEffect({ effect, timeline, dustAngle = DEFAULT_DUST_ANG
       const lines: Line[] = [];
       const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
       const range = document.createRange();
-      const segmenter = new Intl.Segmenter('vi', { granularity: 'grapheme' });
+      const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('vi', { granularity: 'grapheme' }) : null;
       // Paint full highlight boxes (including padding) so highlights erase with the text.
       content.querySelectorAll('mark').forEach(mark => {
         const rect = mark.getBoundingClientRect(), style = getComputedStyle(mark);
@@ -61,7 +61,11 @@ export function EraseTextEffect({ effect, timeline, dustAngle = DEFAULT_DUST_ANG
         const style = getComputedStyle(element), size = parseFloat(style.fontSize);
         ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
         ctx.fillStyle = style.color; ctx.textBaseline = 'alphabetic';
-        for (const { segment, index } of segmenter.segment(text)) {
+        let offset = 0;
+        const segments = segmenter ? segmenter.segment(text) : Array.from(text, segment => {
+          const index = offset; offset += segment.length; return { segment, index };
+        });
+        for (const { segment, index } of segments) {
           range.setStart(node, index); range.setEnd(node, index + segment.length);
           const rect = range.getBoundingClientRect(); if (!rect.width || !rect.height) continue;
           const left = rect.left - bounds.left, top = rect.top - bounds.top;
@@ -75,7 +79,8 @@ export function EraseTextEffect({ effect, timeline, dustAngle = DEFAULT_DUST_ANG
       range.detach(); lines.sort((a, z) => a.top - z.top);
       const image = ctx.getImageData(0, 0, width, height).data;
       const points: Point[] = [];
-      for (let y = 0; y < height; y += 3) for (let x = 0; x < width; x += 3) {
+      const sampleStep = Math.max(3, Math.ceil(Math.sqrt(width * height / 9000)));
+      for (let y = 0; y < height; y += sampleStep) for (let x = 0; x < width; x += sampleStep) {
         const offset = (y * width + x) * 4;
         if (image[offset + 3] > 100) points.push({ x, y, color: `rgb(${image[offset]},${image[offset + 1]},${image[offset + 2]})`, r: seededRandom(y * width + x), r2: seededRandom(y * width + x + 77) });
       }

@@ -11,37 +11,54 @@ import { TeacherDashboard } from './components/TeacherDashboard';
 import { StudentView } from './components/StudentView';
 import { BookOpen, ShieldCheck, Zap, Layers, Sparkles, Check } from 'lucide-react';
 
-function extractRoomFromUrl(): string {
-  if (typeof window === 'undefined') return '';
-  // Check standard query param ?room= or ?roomId= or ?join=
-  const searchParams = new URLSearchParams(window.location.search);
-  const roomQuery = searchParams.get('room') || searchParams.get('roomId') || searchParams.get('join');
-  if (roomQuery) return roomQuery.trim().toUpperCase();
+function parseRouteFromUrl(): { view: 'teacher' | 'student'; roomCode: string } {
+  if (typeof window === 'undefined') return { view: 'teacher', roomCode: '' };
 
-  // Also check hash fragment e.g. /#/?room=... or /#room=...
+  const pathname = window.location.pathname.toLowerCase();
+  const searchParams = new URLSearchParams(window.location.search);
+  let roomCode = (searchParams.get('room') || searchParams.get('roomId') || searchParams.get('join') || '').trim().toUpperCase();
+
+  // Check path: /student/:roomId or /student or /join/:roomId
+  if (pathname.startsWith('/student') || pathname.startsWith('/join') || pathname.startsWith('/learner')) {
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length >= 2 && !roomCode) {
+      roomCode = decodeURIComponent(parts[1]).trim().toUpperCase();
+    }
+    return { view: 'student', roomCode };
+  }
+
+  // Also check hash fragment e.g. /#/?room=... or /#room=... or /#/student?room=...
   if (window.location.hash) {
     const hash = window.location.hash;
+    const isStudentHash = hash.toLowerCase().includes('student') || hash.toLowerCase().includes('learner');
     const qIdx = hash.indexOf('?');
     if (qIdx !== -1) {
       const hashParams = new URLSearchParams(hash.substring(qIdx));
       const hashRoom = hashParams.get('room') || hashParams.get('roomId') || hashParams.get('join');
-      if (hashRoom) return hashRoom.trim().toUpperCase();
+      if (hashRoom) roomCode = hashRoom.trim().toUpperCase();
     } else {
       const match = hash.match(/[#&](?:room|join)=([^&]+)/i);
-      if (match && match[1]) return decodeURIComponent(match[1]).trim().toUpperCase();
+      if (match && match[1]) roomCode = decodeURIComponent(match[1]).trim().toUpperCase();
+    }
+    if (isStudentHash || roomCode) {
+      return { view: 'student', roomCode };
     }
   }
-  return '';
+
+  // Query parameter ?room= indicates direct learner intent
+  if (roomCode) {
+    return { view: 'student', roomCode };
+  }
+
+  return { view: 'teacher', roomCode: '' };
 }
 
 export default function App() {
-  const [detectedRoom] = useState<string>(() => extractRoomFromUrl());
+  const initialRoute = parseRouteFromUrl();
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'teacher' | 'student'>(() => {
-    return detectedRoom ? 'student' : 'teacher';
-  });
-  const [initialRoomCode, setInitialRoomCode] = useState<string>(detectedRoom);
+  const [currentView, setCurrentView] = useState<'teacher' | 'student'>(initialRoute.view);
+  const [initialRoomCode, setInitialRoomCode] = useState<string>(initialRoute.roomCode);
 
   // 1. Initial connection verification on boot
   useEffect(() => {
@@ -57,18 +74,40 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // 3. Keep initialRoomCode in sync with URL changes
+  // 3. Browser Back/Forward navigation listener
   useEffect(() => {
-    const fromUrl = extractRoomFromUrl();
-    if (fromUrl) {
-      setInitialRoomCode(fromUrl);
-      setCurrentView('student');
-    }
+    const handlePopState = () => {
+      const route = parseRouteFromUrl();
+      setCurrentView(route.view);
+      if (route.roomCode) setInitialRoomCode(route.roomCode);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const handleOpenLearnerView = (roomCode?: string) => {
+  const handleSwitchView = (view: 'teacher' | 'student', roomCode?: string) => {
+    setCurrentView(view);
+    const code = roomCode !== undefined ? roomCode : initialRoomCode;
     if (roomCode) setInitialRoomCode(roomCode);
-    setCurrentView('student');
+
+    if (typeof window !== 'undefined') {
+      const targetUrl = view === 'student'
+        ? (code ? `/student?room=${code}` : '/student')
+        : '/';
+      const currentUrl = window.location.pathname + window.location.search;
+      if (currentUrl !== targetUrl) {
+        try {
+          window.history.pushState({ view, roomCode: code }, '', targetUrl);
+        } catch {
+          // Non-blocking fallback
+        }
+      }
+    }
+  };
+
+  const handleOpenLearnerView = (roomCode?: string) => {
+    handleSwitchView('student', roomCode);
   };
 
   return (
@@ -76,7 +115,7 @@ export default function App() {
       {/* Neobrutalist Navbar */}
       <Navbar
         currentView={currentView}
-        onSwitchView={setCurrentView}
+        onSwitchView={handleSwitchView}
         user={user}
         activeRoomId={initialRoomCode || undefined}
       />
@@ -86,7 +125,7 @@ export default function App() {
         {currentView === 'student' ? (
           <StudentView
             initialRoomCode={initialRoomCode}
-            onSwitchToTeacher={() => setCurrentView('teacher')}
+            onSwitchToTeacher={() => handleSwitchView('teacher')}
           />
         ) : authLoading ? (
           <div className="min-h-[60vh] flex items-center justify-center">
@@ -152,7 +191,7 @@ export default function App() {
 
                   <button
                     type="button"
-                    onClick={() => setCurrentView('student')}
+                    onClick={() => handleSwitchView('student')}
                     className="neo-btn px-6 py-3.5 bg-[#FFE500] text-black text-sm font-bold uppercase tracking-wider"
                   >
                     Enter as Student

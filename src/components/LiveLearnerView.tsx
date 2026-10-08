@@ -175,13 +175,15 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
 
   // Progress Bar percent
   let progressPercent = 0;
-  if (activeTimeline.phase === 'hold') {
-    progressPercent = Math.min(100, (activeTimeline.elapsedMs / activeTimeline.effectiveHoldMs) * 100);
-  } else if (activeTimeline.phase === 'erase') {
-    progressPercent = Math.min(100, activeTimeline.progress * 100);
+  if (!room.isFullReview) {
+    if (activeTimeline.phase === 'hold') {
+      progressPercent = Math.min(100, (activeTimeline.elapsedMs / activeTimeline.effectiveHoldMs) * 100);
+    } else if (activeTimeline.phase === 'erase') {
+      progressPercent = Math.min(100, activeTimeline.progress * 100);
+    }
   }
 
-  const shareUrl = `${window.location.origin}/?room=${room.id}`;
+  const shareUrl = `${window.location.origin}/student?room=${room.id}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl).then(() => {
@@ -210,6 +212,9 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
     simStartTimeRef.current = performance.now();
     setIsSimulating(true);
   };
+
+  const isFullReview = Boolean(room.isFullReview || currentUnit?.isFullReview);
+  const unitLabel = currentUnit?.granularity === 'paragraph' ? 'Paragraph' : 'Sentence';
 
   return (
     <div className="neo-box bg-white p-3.5 sm:p-4 border-2 border-black space-y-3">
@@ -309,6 +314,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
                 key={eff.id}
                 type="button"
                 onClick={() => handleSelectEffect(eff.id)}
+                aria-pressed={activeEffect === eff.id}
                 className={`px-2 py-0.5 font-bold transition-all ${
                   activeEffect === eff.id ? eff.activeBg : 'text-neutral-700 hover:text-black'
                 }`}
@@ -417,13 +423,43 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
 
             {/* Chunk counter tag */}
             <div className="flex items-center justify-between text-[9px] font-mono text-neutral-500 mb-2">
-              <span>Đoạn #{((currentUnit?.index ?? 0) + 1)} / {currentUnit?.totalUnits || 1}</span>
-              <span className="font-bold text-neutral-700">Hiệu ứng: {activeEffect}</span>
+              <span>
+                {isFullReview
+                  ? 'Full Text Review'
+                  : `${unitLabel} #${((currentUnit?.index ?? 0) + 1)} / ${currentUnit?.totalUnits || 1}`}
+              </span>
+              <span className="font-bold text-neutral-700">Effect: {isSimulating ? activeEffect : (room.eraseEffect || 'vaporize')}</span>
             </div>
 
             {/* Reading Content Center */}
             <div className="flex-1 flex items-center justify-center py-3 sm:py-6">
-              {isTextVisible && currentUnit?.text ? (
+              {isFullReview && currentUnit?.text ? (
+                <div className="w-full text-left space-y-3 px-1 max-h-[220px] overflow-y-auto">
+                  <div className="text-[10px] font-mono font-bold text-neutral-600 bg-[#FFFDF0] p-1 border border-black/30">
+                    📖 Full Text Mode (Learners can read entire passage)
+                  </div>
+                  <div className="font-reading text-base leading-relaxed text-[#111111] space-y-2">
+                    {currentUnit.text.split(/\n\s*\n/).map((p, pIdx) => (
+                      <p key={pIdx}>
+                        {buildRenderSlices(p, approvedSpans).map((slice, sIdx) =>
+                          slice.isHighlight && slice.annotation ? (
+                            <mark
+                              key={sIdx}
+                              onClick={() => setActiveTooltip(slice.annotation!)}
+                              className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block cursor-pointer shadow-[1px_1px_0px_#000]"
+                              title="Tap to view definition"
+                            >
+                              {slice.text}
+                            </mark>
+                          ) : (
+                            <span key={sIdx}>{slice.text}</span>
+                          )
+                        )}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : isTextVisible && currentUnit?.text ? (
                 <EraseTextEffect
                   effect={isSimulating ? activeEffect : (room.eraseEffect || 'vaporize')}
                   timeline={activeTimeline}
@@ -438,7 +474,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
                           key={idx}
                           onClick={() => setActiveTooltip(slice.annotation!)}
                           className="bg-[#FFE500] text-black font-semibold px-1 py-0.5 border-b-2 border-black inline-block cursor-pointer shadow-[1px_1px_0px_#000] hover:scale-105 transition-transform"
-                          title="Học sinh bấm vào sẽ thấy nghĩa"
+                          title="Tap to view definition"
                         >
                           {slice.text}
                         </mark>
@@ -452,12 +488,12 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
                 <div className="text-center py-4 space-y-1.5 text-neutral-400 font-mono">
                   <Clock size={16} className="mx-auto animate-pulse" />
                   <p className="text-xs font-bold text-neutral-600 uppercase">
-                    {activeTimeline.phase === 'blank_finished' ? 'Đã hoàn thành lượt đọc' : 'Chờ giáo viên phát lượt đọc...'}
+                    {activeTimeline.phase === 'blank_finished' ? 'Text is currently hidden' : 'Waiting for teacher to start reading...'}
                   </p>
                   <p className="text-[10px]">
                     {isSimulating
-                      ? 'Đang chuẩn bị vòng lặp mô phỏng tiếp theo...'
-                      : 'Màn hình học sinh đang để trống'}
+                      ? 'Preparing next simulation cycle...'
+                      : 'Learner screen is currently blank'}
                   </p>
                 </div>
               )}
