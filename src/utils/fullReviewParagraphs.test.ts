@@ -8,6 +8,6 @@ test('full review has numbered paragraphs and preserves globally matched repeate
  const text='İ drop out of school.\n\nSecond drop out of work.',start=text.lastIndexOf('drop out of');
  const room={id:'full',status:'active',playbackStatus:'manual_show',isFullReview:true,highlightEnabled:true,currentUnit:{index:0,text,annotations:[{id:'second',text:'drop out of',startOffset:start,endOffset:start+11,type:'phrasal_verb',meaning:'second'}]}} as ClassroomRoom;
  const html=renderToStaticMarkup(createElement(ReadingUnitText,{room,timeline:calculateRoomTimeline(room)}));
- assert.equal(html.replace(/<[^>]*>/g,''),text);assert.equal((html.match(/data-review-paragraph=/g)||[]).length,2);assert.ok(html.includes('aria-label="Đoạn 2"'));assert.equal((html.match(/<mark/g)||[]).length,1);
+ assert.equal(html.replace(/<[^>]*>/g,''),text);assert.equal((html.match(/data-review-paragraph=/g)||[]).length,2);assert.ok(html.includes('aria-label="Paragraph 2"'));assert.equal((html.match(/<mark/g)||[]).length,1);
  assert.ok(html.split('data-review-paragraph="2"')[1].includes('<mark'));assert.equal(html.split('data-review-paragraph="2"')[0].includes('<mark'),false);assert.ok(html.includes('bg-[#FF3838]'));
 });

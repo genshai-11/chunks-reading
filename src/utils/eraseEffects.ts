@@ -1,13 +1,13 @@
 import type { CalculatedTimeline, EraseEffect } from '../types';
 
 export const ERASE_EFFECT_OPTIONS: { id: EraseEffect; label: string; activeBg: string }[] = [
-  { id: 'eraser', label: '🧽 Gôm lau', activeBg: 'bg-[#FFE500] text-black' },
-  { id: 'dust', label: '💨 Bụi chữ bay', activeBg: 'bg-[#FFE500] text-black' },
-  { id: 'sparkle', label: '✨ Làn sáng', activeBg: 'bg-[#FFE500] text-black' },
-  { id: 'vaporize', label: 'Tan biến (cũ)', activeBg: 'bg-[#FF3838] text-white' },
-  { id: 'dissolve', label: 'Hòa tan (cũ)', activeBg: 'bg-[#FFE500] text-black' },
-  { id: 'fade', label: 'Mờ dần', activeBg: 'bg-[#00D2FF] text-black' },
-  { id: 'wipe', label: 'Gạt cuộn', activeBg: 'bg-black text-white' },
+  { id: 'eraser', label: '🧽 Eraser', activeBg: 'bg-[#FFE500] text-black' },
+  { id: 'dust', label: '💨 Dust Particles', activeBg: 'bg-[#FFE500] text-black' },
+  { id: 'sparkle', label: '✨ Light Sweep', activeBg: 'bg-[#FFE500] text-black' },
+  { id: 'vaporize', label: 'Vaporize', activeBg: 'bg-[#FF3838] text-white' },
+  { id: 'dissolve', label: 'Dissolve', activeBg: 'bg-[#FFE500] text-black' },
+  { id: 'fade', label: 'Fade', activeBg: 'bg-[#00D2FF] text-black' },
+  { id: 'wipe', label: 'Wipe', activeBg: 'bg-black text-white' },
 ];
 export const DEFAULT_DUST_ANGLE = -45;
 export const clamp = (n: number) => Math.max(0, Math.min(1, n));

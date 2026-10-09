@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ApprovedSpan } from '../types';
+import type { ApprovedSpan } from '../types';
 
 /**
  * Cleanly split English text into sentences while protecting common abbreviations.

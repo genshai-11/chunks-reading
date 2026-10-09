@@ -6,7 +6,7 @@ export function getWordOffsets(text: string): WordOffset[] {
   return Array.from(text.matchAll(/\S+/gu), match => ({ start: match.index!, end: match.index! + match[0].length }));
 }
 export function validateWordsPerSecond(rate: number): number {
-  if (!Number.isInteger(rate) || rate < 1 || rate > 50) throw new Error('Tốc độ phải là số nguyên từ 1 đến 50 từ/giây.');
+  if (!Number.isInteger(rate) || rate < 1 || rate > 50) throw new Error('Reading speed must be an integer between 1 and 50 words per second.');
   return rate;
 }
 export function getWordsPerSecond(rate?: number): number {
@@ -35,7 +35,7 @@ export function getErasedTextOffset(text: string, elapsedMs: number, rate = DEFA
   return completed >= words.length ? text.length : words[completed].start;
 }
 export function validateReadingDuration(value: number): number {
-  if (!Number.isInteger(value) || value <= 0 || value > 120000) throw new Error('Thời gian phải lớn hơn 0 và không quá 120 giây.');
+  if (!Number.isInteger(value) || value <= 0 || value > 120000) throw new Error('Duration must be greater than 0 and at most 120 seconds.');
   return value;
 }
 export function getSequentialTiming(room: Pick<ClassroomRoom, 'wordsPerSecond' | 'timingMode' | 'holdDurationMs' | 'eraseDurationMs'>, text: string) {

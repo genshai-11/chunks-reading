@@ -8,7 +8,7 @@ const pending=new Map<string,Promise<void>>();
 export const hasRoomClock=(roomId:string)=>clocks.has(roomId);
 export function roomClockNow(roomId:string):number {
  const sample=clocks.get(roomId);
- if(!sample)throw new Error('Chưa đồng bộ thời gian. Vui lòng thử lại.');
+ if(!sample)throw new Error('Server clock not synchronized. Please try again.');
  return Math.round(getServerClockNow(sample,performance.now()));
 }
 /** Read only the already-accessible room. Firestore batchGet readTime is server time, not document updatedAt. */
@@ -34,8 +34,8 @@ export async function syncRoomClock(roomId:string):Promise<void> {
    const readTime=records.find(record=>typeof record?.readTime==='string')?.readTime;
    clocks.set(roomId,createServerClockSample(readTime,sent,received));
   }finally{clearTimeout(timeout);}
- })().catch(()=>{throw new Error('Không đồng bộ được giờ server. Kiểm tra kết nối rồi thử lại.');});pending.set(roomId,task);
- try{await task;}catch{throw new Error('Không đồng bộ được giờ server. Kiểm tra kết nối rồi thử lại.');}
+ })().catch(()=>{throw new Error('Failed to synchronize server clock. Check your connection and try again.');});pending.set(roomId,task);
+ try{await task;}catch{throw new Error('Failed to synchronize server clock. Check your connection and try again.');}
  finally{pending.delete(roomId);}
 }
 export function getSyncedRoomTimeline(room:ClassroomRoom){

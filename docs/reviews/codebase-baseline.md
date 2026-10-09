@@ -1,6 +1,8 @@
 # Codebase baseline và đề xuất onboarding Matt
 
-Status: reviewed-current-code; agent-setup-complete; product-spec-pending-test-seams
+Status: reviewed-current-code; agent-setup-complete; test-seams-agreed; historical-PRD-authority-pending
+
+Follow-up: [PRD implementation audit](prd-implementation-audit.md) tìm thấy PRD ở commit 78abf47/ref origin/master (không phải ancestor của main), đối chiếu source hiện tại và ghi failing probes. Baseline dưới đây là snapshot của lần rà soát đầu, không phải coverage verdict mới nhất.
 Baseline: HEAD `dc89d77` cùng working tree hiện tại, bao gồm thay đổi chưa commit.
 
 ## Phạm vi
@@ -139,4 +141,4 @@ Single-context; read docs/agents/domain.md before domain exploration.
 4. Dùng `to-spec` tổng hợp product baseline với câu hỏi mở; không phát minh yêu cầu hoặc đánh dấu ready-for-agent khi còn blocker.
 5. Chỉ `to-tickets` và implement sau khi spec đã được owner duyệt; mỗi ticket là vertical slice có acceptance check.
 
-Tracker đã được xác nhận và agent setup đã hoàn tất. Chưa chạy `to-spec` publish vì test seams chưa được owner xác nhận. Không dùng workflow write-a-spec từ accepted proposal cho baseline hồi cứu; repo chưa có accepted proposal để suy ra thiết kế tính năng mới.
+Tracker, agent setup và test seams đã được xác nhận. Chưa chạy `to-spec` publish: follow-up audit tìm thấy PRD lịch sử trên nhánh khác, cần owner chốt product authority và các behavior lệch trước khi tổng hợp remediation spec. Không dùng workflow write-a-spec từ accepted proposal cho baseline hồi cứu; repo chưa có accepted proposal để suy ra thiết kế tính năng mới.

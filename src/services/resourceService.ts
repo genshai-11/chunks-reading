@@ -18,6 +18,8 @@ import { db, handleFirestoreError, OperationType, auth } from '../firebase';
 import { ReadingResource, ResourceStatus, SourceType, PhraseAnnotation } from '../types';
 import { segmentSentences, segmentParagraphs } from '../utils/textSegmentation';
 import { detectAllPhrasesForResource } from './phraseDetection';
+import { SEEDED_IELTS_RESOURCES } from './seedDataIelts';
+import { SEEDED_NAVAL_RESOURCES } from './seedDataNaval';
 
 const COLLECTION_NAME = 'resources';
 
@@ -117,7 +119,7 @@ export const SEEDED_DEFAULT_RESOURCES: Omit<ReadingResource, 'ownerId' | 'id'>[]
   // 2. Sir Ken Robinson: Do Schools Kill Creativity? (Full Speech)
   {
     title: 'Sir Ken Robinson: Do Schools Kill Creativity? (TED)',
-    category: 'TED Talk: Education',
+    category: 'TED Talks',
     topic: 'Creativity, Educational Reform, Human Potential',
     level: 'B2 Upper-Intermediate',
     sourceType: 'seeded',
@@ -203,7 +205,7 @@ export const SEEDED_DEFAULT_RESOURCES: Omit<ReadingResource, 'ownerId' | 'id'>[]
   // 3. Simon Sinek: How Great Leaders Inspire Action (Full Speech)
   {
     title: 'Simon Sinek: How Great Leaders Inspire Action (TED)',
-    category: 'TED Talk: Leadership',
+    category: 'TED Talks',
     topic: 'Leadership, The Golden Circle, Biology of Trust',
     level: 'B2 Upper-Intermediate',
     sourceType: 'seeded',
@@ -269,7 +271,7 @@ export const SEEDED_DEFAULT_RESOURCES: Omit<ReadingResource, 'ownerId' | 'id'>[]
   // 4. Amy Cuddy: Your Body Language May Shape Who You Are (Full Speech)
   {
     title: 'Amy Cuddy: Body Language Shapes Who You Are (TED)',
-    category: 'TED Talk: Psychology',
+    category: 'TED Talks',
     topic: 'Presence, Nonverbal Behavior, Power Posing',
     level: 'B2 Upper-Intermediate',
     sourceType: 'seeded',
@@ -337,7 +339,7 @@ export const SEEDED_DEFAULT_RESOURCES: Omit<ReadingResource, 'ownerId' | 'id'>[]
   // 5. Tim Urban: Inside the Mind of a Master Procrastinator (Full Speech)
   {
     title: 'Tim Urban: Inside the Mind of a Procrastinator (TED)',
-    category: 'TED Talk: Psychology',
+    category: 'TED Talks',
     topic: 'Procrastination, Rational Mind, Panic Monster',
     level: 'B1 Intermediate',
     sourceType: 'seeded',
@@ -401,7 +403,7 @@ export const SEEDED_DEFAULT_RESOURCES: Omit<ReadingResource, 'ownerId' | 'id'>[]
   // 6. Julian Treasure: How to Speak So That People Want to Listen (Full Speech)
   {
     title: 'Julian Treasure: How to Speak So People Listen (TED)',
-    category: 'TED Talk: Communication',
+    category: 'TED Talks',
     topic: 'Vocal Presence, HAIL Framework, The Voice Toolbox',
     level: 'C1 Advanced',
     sourceType: 'seeded',
@@ -483,7 +485,9 @@ export const SEEDED_DEFAULT_RESOURCES: Omit<ReadingResource, 'ownerId' | 'id'>[]
       { id: 'jt-7', unitIndex: 37, unitType: 'sentence', text: 'have a look', startOffset: 7, endOffset: 18, type: 'collocation', meaning: 'Inspect or examine closely', status: 'approved', source: 'deterministic' },
       { id: 'jt-8', unitIndex: 50, unitType: 'sentence', text: 'slow right down', startOffset: 67, endOffset: 82, type: 'phrasal_verb', meaning: 'Decelerate vocal cadence intentionally', status: 'approved', source: 'deterministic' }
     ]
-  }
+  },
+  ...SEEDED_IELTS_RESOURCES,
+  ...SEEDED_NAVAL_RESOURCES,
 ];
 
 export async function fetchTeacherResources(teacherUid: string): Promise<ReadingResource[]> {
@@ -601,7 +605,9 @@ export async function seedTeacherLibraryIfEmpty(teacherUid: string, forceSeed: b
         (item.title.includes('Simon Sinek') && e.title.includes('Simon Sinek')) ||
         (item.title.includes('Amy Cuddy') && e.title.includes('Amy Cuddy')) ||
         (item.title.includes('Tim Urban') && e.title.includes('Tim Urban')) ||
-        (item.title.includes('Julian Treasure') && e.title.includes('Julian Treasure'))
+        (item.title.includes('Julian Treasure') && e.title.includes('Julian Treasure')) ||
+        (item.title.startsWith('IELTS Reading:') && e.title.includes(item.title.replace('IELTS Reading: ', ''))) ||
+        (item.title.startsWith('Naval Ravikant:') && e.title.includes(item.title.replace('Naval Ravikant: ', '')))
       );
 
       if (!match) {
@@ -610,8 +616,8 @@ export async function seedTeacherLibraryIfEmpty(teacherUid: string, forceSeed: b
           ...item,
           ownerId: teacherUid,
         });
-      } else if (forceSeed || (match.sentences && match.sentences.length < item.sentences.length)) {
-        // Existing version is truncated: upgrade to full version
+      } else if (forceSeed || (match.sentences && match.sentences.length < item.sentences.length) || match.category !== item.category) {
+        // Existing version is truncated or outdated category: upgrade to latest version
         await updateDoc(doc(db, COLLECTION_NAME, match.id), {
           title: item.title,
           category: item.category,
@@ -634,7 +640,7 @@ export async function seedTeacherLibraryIfEmpty(teacherUid: string, forceSeed: b
 }
 
 /**
- * Force refresh and sync all 6 full speeches (Steve Jobs + 5 TED Talks)
+ * Force refresh and sync all 26 full reading resources (Steve Jobs + 5 TED Talks + 10 IELTS + 10 Naval Ravikant)
  */
 export async function resetAndSyncFullResources(teacherUid: string): Promise<ReadingResource[]> {
   await seedTeacherLibraryIfEmpty(teacherUid, true);

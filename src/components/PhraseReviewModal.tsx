@@ -91,7 +91,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
 
     const trimmedInput = newPhraseText.trim();
     if (!trimmedInput) {
-      setNewPhraseError('Vui lòng nhập cụm từ cần gắn highlight.');
+      setNewPhraseError('Please enter a phrase to highlight.');
       return;
     }
 
@@ -101,7 +101,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
     const matchIdx = lowerSentence.indexOf(lowerTarget);
 
     if (matchIdx === -1) {
-      setNewPhraseError(`Không tìm thấy "${trimmedInput}" trong câu số ${activeUnitIndex + 1}.`);
+      setNewPhraseError(`Could not find "${trimmedInput}" in sentence #${activeUnitIndex + 1}.`);
       return;
     }
 
@@ -116,7 +116,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
     );
 
     if (collision) {
-      setNewPhraseError(`Trùng với cụm từ đã có: "${collision.text}".`);
+      setNewPhraseError(`Collides with existing phrase: "${collision.text}".`);
       return;
     }
 
@@ -216,16 +216,16 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
             </div>
             <div className="min-w-0">
               <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-black truncate">
-                Xem & Duyệt Cụm từ • {resource.title}
+                Review & Approve Chunks • {resource.title}
               </h2>
               <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-neutral-800">
-                <span>{resource.sentences.length} câu</span>
+                <span>{resource.sentences.length} sentences</span>
                 <span>•</span>
-                <span>{resource.paragraphs?.length || 1} đoạn</span>
+                <span>{resource.paragraphs?.length || 1} paragraphs</span>
                 <span>•</span>
-                <span className="font-bold text-green-800">{totalApproved} đã duyệt</span>
+                <span className="font-bold text-green-800">{totalApproved} approved</span>
                 <span>•</span>
-                <span className="font-bold text-neutral-700">{totalPending} chờ duyệt</span>
+                <span className="font-bold text-neutral-700">{totalPending} pending</span>
               </div>
             </div>
           </div>
@@ -251,7 +251,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                   : 'text-neutral-700 hover:text-black'
               }`}
             >
-              <Eye size={13} /> Từng câu ({resource.sentences.length})
+              <Eye size={13} /> Sentence by Sentence ({resource.sentences.length})
             </button>
             <button
               type="button"
@@ -262,7 +262,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                   : 'text-neutral-700 hover:text-black'
               }`}
             >
-              <BookOpen size={13} /> Toàn bộ bài đọc
+              <BookOpen size={13} /> Full Reading Passage
             </button>
             <button
               type="button"
@@ -273,7 +273,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                   : 'text-neutral-700 hover:text-black'
               }`}
             >
-              <SlidersHorizontal size={13} /> Danh mục cụm từ ({annotations.length})
+              <SlidersHorizontal size={13} /> Phrase Catalog ({annotations.length})
             </button>
           </div>
 
@@ -282,9 +282,9 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
               type="button"
               onClick={handleApproveAllInResource}
               className="neo-btn-sm px-2.5 py-1 bg-[#4ADE80] text-black text-[11px] font-bold"
-              title="Duyệt tất cả các cụm từ trong bài"
+              title="Approve all phrases in resource"
             >
-              <CheckCircle2 size={12} className="mr-1 inline" /> Duyệt tất cả ({annotations.length})
+              <CheckCircle2 size={12} className="mr-1 inline" /> Approve All ({annotations.length})
             </button>
           </div>
         </div>
@@ -299,10 +299,10 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-black">
-                      Câu số: {activeUnitIndex + 1} / {resource.sentences.length}
+                      Sentence: {activeUnitIndex + 1} / {resource.sentences.length}
                     </span>
                     <span className="text-[11px] font-mono text-neutral-500">
-                      ({unitAnnotations.length} cụm từ gắn trong câu này)
+                      ({unitAnnotations.length} chunks in this sentence)
                     </span>
                   </div>
 
@@ -313,7 +313,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                       onClick={() => setActiveUnitIndex(prev => prev - 1)}
                       className="neo-btn-sm px-2 py-0.5 bg-neutral-100 text-xs font-bold"
                     >
-                      <ChevronLeft size={14} className="inline mr-0.5" /> Câu trước
+                      <ChevronLeft size={14} className="inline mr-0.5" /> Previous
                     </button>
                     <select
                       value={activeUnitIndex}
@@ -322,7 +322,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                     >
                       {resource.sentences.map((_, idx) => (
                         <option key={idx} value={idx}>
-                          Câu {idx + 1}
+                          Sentence {idx + 1}
                         </option>
                       ))}
                     </select>
@@ -332,7 +332,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                       onClick={() => setActiveUnitIndex(prev => prev + 1)}
                       className="neo-btn-sm px-2 py-0.5 bg-neutral-100 text-xs font-bold"
                     >
-                      Câu sau <ChevronRight size={14} className="inline ml-0.5" />
+                      Next <ChevronRight size={14} className="inline ml-0.5" />
                     </button>
                   </div>
                 </div>
@@ -340,7 +340,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                 {/* Live Chunk Preview */}
                 <div className="p-4 bg-[#FFFDF7] border-2 border-black min-h-20 shadow-[1px_1px_0px_#000]">
                   <div className="text-[10px] font-mono uppercase text-neutral-400 mb-1 flex items-center justify-between">
-                    <span>Màn hình học sinh sẽ thấy đoạn này:</span>
+                    <span>Student screen preview for this unit:</span>
                     <span className="text-neutral-500 font-bold">{approvedPreviewSpans.length} highlights</span>
                   </div>
                   <p className="font-reading text-xl sm:text-2xl leading-relaxed text-[#111111]">
@@ -365,17 +365,17 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="neo-badge bg-[#4ADE80] text-black text-[11px]">
-                    {unitAnnotations.filter(a => a.status === 'approved').length} Đã duyệt
+                    {unitAnnotations.filter(a => a.status === 'approved').length} Approved
                   </span>
                   <span className="neo-badge bg-neutral-200 text-black text-[11px]">
-                    {unitAnnotations.filter(a => a.status === 'pending').length} Chờ duyệt
+                    {unitAnnotations.filter(a => a.status === 'pending').length} Pending
                   </span>
                   <button
                     type="button"
                     onClick={handleApproveAllInUnit}
                     className="text-xs font-mono font-bold text-blue-700 underline hover:text-blue-900 ml-1"
                   >
-                    Duyệt tất cả trong câu này
+                    Approve all in this sentence
                   </button>
                 </div>
 
@@ -386,19 +386,19 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                   className="neo-btn-sm px-3 py-1 bg-[#00D2FF] text-black text-xs font-bold"
                 >
                   <Sparkles size={13} className={`mr-1 inline ${isAiLoading ? 'animate-spin' : ''}`} />
-                  {isAiLoading ? 'Đang phân tích...' : 'AI Quét cụm từ tự động'}
+                  {isAiLoading ? 'Analyzing...' : 'AI Scan Chunks'}
                 </button>
               </div>
 
               {/* Candidates List for this Unit */}
               <div className="space-y-2.5">
                 <h3 className="text-xs font-mono font-bold uppercase tracking-wide text-black">
-                  Các cụm từ phát hiện trong câu #{activeUnitIndex + 1}
+                  Detected chunks in sentence #{activeUnitIndex + 1}
                 </h3>
 
                 {unitAnnotations.length === 0 ? (
                   <div className="neo-box-sm p-4 bg-white text-center text-neutral-500 font-mono text-xs">
-                    Chưa có cụm từ nào được đánh dấu trong câu này. Thêm thủ công bằng form bên dưới hoặc bấm "AI Quét cụm từ"!
+                    No chunks marked in this sentence yet. Add manually below or click "AI Scan Chunks"!
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -420,14 +420,14 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                                 {ann.type.replace('_', ' ')}
                               </span>
                               <span className="text-[10px] font-mono text-neutral-500">
-                                vị trí: [{ann.startOffset}, {ann.endOffset})
+                                offset: [{ann.startOffset}, {ann.endOffset})
                               </span>
                               <span className="text-[10px] font-mono text-neutral-400">
-                                nguồn: {ann.source}
+                                source: {ann.source}
                               </span>
                             </div>
                             <div className="text-xs text-neutral-700 italic">
-                              Ý nghĩa: {ann.meaning}
+                              Meaning: {ann.meaning}
                             </div>
                           </div>
 
@@ -437,18 +437,18 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                                 type="button"
                                 onClick={() => handleToggleStatus(ann.id, 'rejected')}
                                 className="neo-btn-sm px-2 py-1 bg-red-100 text-red-700 border-red-900 text-xs hover:bg-red-200"
-                                title="Bỏ duyệt cụm từ này"
+                                title="Unapprove this phrase"
                               >
-                                <X size={13} className="mr-0.5 inline" /> Bỏ duyệt
+                                <X size={13} className="mr-0.5 inline" /> Unapprove
                               </button>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => handleToggleStatus(ann.id, 'approved')}
                                 className="neo-btn-sm px-2 py-1 bg-[#4ADE80] text-black text-xs hover:bg-green-400 font-bold"
-                                title="Duyệt cụm từ này"
+                                title="Approve this phrase"
                               >
-                                <Check size={13} className="mr-0.5 inline" /> Duyệt
+                                <Check size={13} className="mr-0.5 inline" /> Approve
                               </button>
                             )}
 
@@ -456,7 +456,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                               type="button"
                               onClick={() => handleDeleteAnnotation(ann.id)}
                               className="p-1 hover:bg-red-100 border border-black text-red-600"
-                              title="Xóa hẳn cụm từ này"
+                              title="Delete this phrase"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -471,7 +471,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
               {/* Add Manual Phrase Form */}
               <div className="neo-box-sm p-4 bg-white space-y-2.5">
                 <h4 className="text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <Plus size={14} /> Thêm cụm từ thủ công vào câu #{activeUnitIndex + 1}
+                  <Plus size={14} /> Add manual phrase to sentence #{activeUnitIndex + 1}
                 </h4>
 
                 {newPhraseError && (
@@ -484,7 +484,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                   <div className="md:col-span-5">
                     <input
                       type="text"
-                      placeholder='Cụm từ chuẩn xác (vd: "give it a shot")'
+                      placeholder='Exact phrase (e.g. "give it a shot")'
                       value={newPhraseText}
                       onChange={e => setNewPhraseText(e.target.value)}
                       className="neo-input w-full text-xs"
@@ -509,14 +509,14 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                       type="submit"
                       className="neo-btn w-full py-2 bg-[#FFE500] text-black text-xs font-bold"
                     >
-                      <Plus size={13} className="mr-1 inline" /> Thêm cụm từ
+                      <Plus size={13} className="mr-1 inline" /> Add Phrase
                     </button>
                   </div>
 
                   <div className="md:col-span-12">
                     <input
                       type="text"
-                      placeholder="Ý nghĩa hoặc giải thích hiển thị cho học sinh (vd: thử làm điều gì đó mới)"
+                      placeholder="Meaning or explanation for students (e.g. try something new)"
                       value={newPhraseMeaning}
                       onChange={e => setNewPhraseMeaning(e.target.value)}
                       className="neo-input w-full text-xs"
@@ -533,19 +533,19 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
               <div className="neo-box-sm p-3.5 bg-white flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-mono font-bold uppercase text-black">
-                    Toàn bộ bài đọc: {resource.title}
+                    Full Reading: {resource.title}
                   </h3>
                   <p className="text-[11px] font-mono text-neutral-500">
-                    Hiển thị trọn vẹn toàn bộ các đoạn văn và câu kèm theo tất cả các cụm từ highlight đã duyệt.
+                    Displays all paragraphs and sentences with all approved highlight chunks.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className="neo-badge bg-[#FFE500] text-black text-[10px]">
-                    {resource.paragraphs?.length || 1} Đoạn văn
+                    {resource.paragraphs?.length || 1} Paragraphs
                   </span>
                   <span className="neo-badge bg-[#4ADE80] text-black text-[10px]">
-                    {totalApproved} Highlights đã duyệt
+                    {totalApproved} Approved Highlights
                   </span>
                 </div>
               </div>
@@ -562,7 +562,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 bg-[#FF3838] border border-black inline-block"></span>
                         <span className="text-[11px] font-mono font-bold text-neutral-600 uppercase">
-                          Đoạn {pIdx + 1} ({paraSentences.length} câu)
+                          Paragraph {pIdx + 1} ({paraSentences.length} sentences)
                         </span>
                       </div>
                       <p className="font-reading text-lg md:text-xl leading-relaxed text-[#111111]">
@@ -593,7 +593,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                                 }
                               }}
                               className="hover:bg-yellow-100/60 cursor-pointer rounded-xs transition-colors mr-1.5"
-                              title={`Bấm để chuyển tới Câu #${resolvedIdx + 1}`}
+                              title={`Click to jump to Sentence #${resolvedIdx + 1}`}
                             >
                               {slices.map((sl, slIdx) =>
                                 sl.isHighlight ? (
@@ -628,7 +628,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                   <Search size={14} className="text-neutral-500" />
                   <input
                     type="text"
-                    placeholder="Tìm theo cụm từ hoặc ý nghĩa..."
+                    placeholder="Search by phrase or meaning..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     className="neo-input text-xs py-1 flex-1"
@@ -641,7 +641,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                     onChange={e => setFilterType(e.target.value)}
                     className="neo-input text-xs py-1"
                   >
-                    <option value="all">Tất cả loại cụm từ</option>
+                    <option value="all">All Types</option>
                     <option value="idiom">Idiom</option>
                     <option value="phrasal_verb">Phrasal Verb</option>
                     <option value="collocation">Collocation</option>
@@ -653,10 +653,10 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                     onChange={e => setFilterStatus(e.target.value)}
                     className="neo-input text-xs py-1"
                   >
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="approved">Đã duyệt (Approved)</option>
-                    <option value="pending">Chờ duyệt (Pending)</option>
-                    <option value="rejected">Bị từ chối (Rejected)</option>
+                    <option value="all">All Statuses</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="rejected">Rejected</option>
                   </select>
                 </div>
               </div>
@@ -665,7 +665,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
               <div className="space-y-2">
                 {filteredAnnotations.length === 0 ? (
                   <div className="neo-box-sm p-6 bg-white text-center text-xs font-mono text-neutral-500">
-                    Không tìm thấy cụm từ nào khớp với bộ lọc.
+                    No phrases found matching filter.
                   </div>
                 ) : (
                   filteredAnnotations.map((ann, idx) => {
@@ -686,7 +686,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                               {ann.type.replace('_', ' ')}
                             </span>
                             <span className="text-[10px] font-mono text-neutral-500 bg-neutral-100 px-1 border border-black">
-                              Câu #{(ann.unitIndex ?? 0) + 1}
+                              Sentence #{(ann.unitIndex ?? 0) + 1}
                             </span>
                             <span
                               className={`text-[10px] font-mono uppercase font-bold px-1.5 py-0.2 border border-black ${
@@ -697,7 +697,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                             </span>
                           </div>
                           <div className="text-xs text-neutral-700 italic">
-                            Ý nghĩa: {ann.meaning || 'Chưa có giải nghĩa'}
+                            Meaning: {ann.meaning || 'No definition'}
                           </div>
                         </div>
 
@@ -709,9 +709,9 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                               setReviewTab('unit');
                             }}
                             className="neo-btn-sm px-2 py-1 bg-white text-black text-xs hover:bg-neutral-100"
-                            title="Chuyển tới câu này"
+                            title="Jump to this sentence"
                           >
-                            Xem câu #{(ann.unitIndex ?? 0) + 1}
+                            View sentence #{(ann.unitIndex ?? 0) + 1}
                           </button>
 
                           {isApproved ? (
@@ -720,7 +720,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                               onClick={() => handleToggleStatus(ann.id, 'rejected')}
                               className="neo-btn-sm px-2 py-1 bg-red-100 text-red-700 text-xs"
                             >
-                              <X size={13} className="mr-0.5 inline" /> Bỏ duyệt
+                              <X size={13} className="mr-0.5 inline" /> Unapprove
                             </button>
                           ) : (
                             <button
@@ -728,7 +728,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                               onClick={() => handleToggleStatus(ann.id, 'approved')}
                               className="neo-btn-sm px-2 py-1 bg-[#4ADE80] text-black text-xs font-bold"
                             >
-                              <Check size={13} className="mr-0.5 inline" /> Duyệt
+                              <Check size={13} className="mr-0.5 inline" /> Approve
                             </button>
                           )}
 
@@ -736,7 +736,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
                             type="button"
                             onClick={() => handleDeleteAnnotation(ann.id)}
                             className="p-1 hover:bg-red-100 border border-black text-red-600"
-                            title="Xóa cụm từ này"
+                            title="Delete this phrase"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -757,13 +757,13 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
             onClick={onClose}
             className="neo-btn px-4 py-2 bg-white text-black text-xs uppercase"
           >
-            Đóng
+            Close
           </button>
 
           <div className="flex items-center gap-3">
             {saveSuccess && (
               <span className="text-xs font-mono font-bold text-green-700 flex items-center gap-1">
-                <Check size={16} /> Đã lưu thành công!
+                <Check size={16} /> Saved successfully!
               </span>
             )}
             <button
@@ -773,7 +773,7 @@ export const PhraseReviewModal: React.FC<PhraseReviewModalProps> = ({
               className="neo-btn px-6 py-2 bg-[#FF3838] text-white text-xs uppercase tracking-wider font-black shadow-[2px_2px_0px_#000]"
             >
               <Save size={14} className="mr-1.5 inline" />
-              {isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi'}
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>

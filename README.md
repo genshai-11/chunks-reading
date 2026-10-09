@@ -27,4 +27,4 @@ View your app in AI Studio: https://ai.studio/apps/9b3bd265-9c01-4ef9-a294-da82d
 - [Domain docs](docs/agents/domain.md): glossary and architecture-decision conventions.
 - [Security specification](security_spec.md): intended security invariants; see the baseline review for enforcement gaps.
 
-Agent setup is complete. The product spec is pending agreement on test seams and unresolved product decisions.
+Agent setup and test-seam agreement are complete. The [PRD implementation audit](docs/reviews/prd-implementation-audit.md) compares current main against the PRD recovered from Git history. PRD authority and product deviations remain open; application completion is not established.

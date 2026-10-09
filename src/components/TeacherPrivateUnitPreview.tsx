@@ -37,16 +37,16 @@ export const TeacherPrivateUnitPreview = memo(function TeacherPrivateUnitPreview
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();navigate(e.key==='ArrowLeft'?-1:1);}
   if(e.key.toLowerCase()==='r'){e.preventDefault();e.stopPropagation();setBrowseIndex(index);setTimeline(null);setStarted(performance.now());}
  }} onToggle={e=>{if(!e.currentTarget.open)setStarted(null);}} className="rounded-lg border-2 border-black bg-[#FFFDF0] text-left text-xs">
-  <summary className="cursor-pointer px-3 py-2 font-bold">Xem trước {room.granularity==='paragraph'?'đoạn':'câu'} tiếp theo <span className="ml-2 font-normal text-neutral-500">Riêng teacher</span></summary>
+  <summary className="cursor-pointer px-3 py-2 font-bold">Preview next {room.granularity==='paragraph'?'paragraph':'sentence'} <span className="ml-2 font-normal text-neutral-500">Teacher only</span></summary>
   <div className="space-y-2 border-t border-black/20 p-3">
-   {browseIndex===null && liveIndex>=units.length-1 && <p className="text-neutral-500">Đã đến đơn vị cuối. Dùng nút trước để xem lại.</p>}
-   <div className="flex flex-wrap items-center justify-between gap-2"><span>{room.granularity==='paragraph'?'Đoạn':'Câu'} {index+1}/{units.length} · không chiếu learner</span>
+   {browseIndex===null && liveIndex>=units.length-1 && <p className="text-neutral-500">Reached the last unit. Use the previous button to review.</p>}
+   <div className="flex flex-wrap items-center justify-between gap-2"><span>{room.granularity==='paragraph'?'Paragraph':'Sentence'} {index+1}/{units.length} · not shown to learners</span>
     <div className="flex gap-1">
-     <button type="button" disabled={index===0} onClick={()=>navigate(-1)} aria-label="Preview trước riêng teacher" className="neo-btn-sm p-1"><ChevronLeft size={16}/></button>
-     <button type="button" disabled={!text} onClick={()=>{setBrowseIndex(index);setTimeline(null);setStarted(started===null?performance.now():null);}} aria-label={started===null?'Đọc thử tự chuyển riêng teacher':'Dừng đọc thử riêng teacher'} className="neo-btn-sm p-1 bg-[#FFE500]">{started===null?<Play size={16}/>:<Pause size={16}/>}</button>
-     <button type="button" disabled={index>=units.length-1} onClick={()=>navigate(1)} aria-label="Preview tiếp riêng teacher" className="neo-btn-sm p-1"><ChevronRight size={16}/></button>
-     <button type="button" onClick={()=>{setStarted(null);setTimeline(null);setBrowseIndex(Math.max(0,Math.min(liveIndex,units.length-1)));}} aria-label="Về đơn vị hiện tại của lớp" title="Về câu/đoạn đang chiếu — chỉ preview teacher" className="neo-btn-sm p-1"><CornerDownLeft size={16}/></button>
-     <button type="button" onClick={()=>{setStarted(null);setTimeline(null);setBrowseIndex(null);}} aria-label="Theo đơn vị tiếp theo của lớp" title="Theo đơn vị tiếp theo của lớp" className="neo-btn-sm p-1"><SkipForward size={16}/></button>
+     <button type="button" disabled={index===0} onClick={()=>navigate(-1)} aria-label="Previous preview (teacher only)" className="neo-btn-sm p-1"><ChevronLeft size={16}/></button>
+     <button type="button" disabled={!text} onClick={()=>{setBrowseIndex(index);setTimeline(null);setStarted(started===null?performance.now():null);}} aria-label={started===null?'Practice read auto-advance (teacher only)':'Stop practice read (teacher only)'} className="neo-btn-sm p-1 bg-[#FFE500]">{started===null?<Play size={16}/>:<Pause size={16}/>}</button>
+     <button type="button" disabled={index>=units.length-1} onClick={()=>navigate(1)} aria-label="Next preview (teacher only)" className="neo-btn-sm p-1"><ChevronRight size={16}/></button>
+     <button type="button" onClick={()=>{setStarted(null);setTimeline(null);setBrowseIndex(Math.max(0,Math.min(liveIndex,units.length-1)));}} aria-label="Current unit" title="Current unit — teacher preview only" className="neo-btn-sm p-1"><CornerDownLeft size={16}/></button>
+     <button type="button" onClick={()=>{setStarted(null);setTimeline(null);setBrowseIndex(null);}} aria-label="Follow live unit" title="Follow live unit" className="neo-btn-sm p-1"><SkipForward size={16}/></button>
     </div>
    </div>
    <ReadingCountdown timeline={shownTimeline}/>

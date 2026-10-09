@@ -1,0 +1,55 @@
+{
+  "scope": "local pure-function and stubbed-fetch audit; no live backend",
+  "results": [
+    {
+      "id": "PRD timing: hold_then_erase boundary",
+      "status": "PASS",
+      "evidence": "Assertion satisfied"
+    },
+    {
+      "id": "PRD timing: erase_within_window boundary",
+      "status": "PASS",
+      "evidence": "Assertion satisfied"
+    },
+    {
+      "id": "PRD exact phrase fixture",
+      "status": "PASS",
+      "evidence": "Assertion satisfied"
+    },
+    {
+      "id": "PRD repeated expression after emoji",
+      "status": "PASS",
+      "evidence": "Assertion satisfied"
+    },
+    {
+      "id": "PRD hide precedence in full review",
+      "status": "FAIL",
+      "evidence": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'manual_show'\n- 'idle'\n"
+    },
+    {
+      "id": "PRD end precedence in full review",
+      "status": "FAIL",
+      "evidence": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'manual_show'\n- 'ended'\n"
+    },
+    {
+      "id": "PRD invalid approved span must not highlight unrelated text",
+      "status": "FAIL",
+      "evidence": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "id": "PRD finite timing: reject or finite fallback for Infinity",
+      "status": "FAIL",
+      "evidence": "The expression evaluated to a falsy value:\n\n  assert.ok(Number.isFinite(durations.totalDurationMs))\n"
+    },
+    {
+      "id": "PRD URL importer blocks localhost before fetching",
+      "status": "FAIL",
+      "evidence": "Importer invoked fetch for loopback URL (stubbed; no network made)\n\n1 !== 0\n"
+    },
+    {
+      "id": "PRD AI occurrences resolved distinctly",
+      "status": "FAIL",
+      "evidence": "Expected values to be strictly equal:\n\n1 !== 2\n"
+    }
+  ]
+}

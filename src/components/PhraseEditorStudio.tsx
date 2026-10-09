@@ -197,7 +197,7 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
     setAddFormError('');
     const trimmed = selectedText.trim();
     if (!trimmed) {
-      setAddFormError('Vui lòng nhập cụm từ.');
+      setAddFormError('Please enter a phrase.');
       return;
     }
 
@@ -217,7 +217,7 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
     } else {
       const matches = findPhraseMatches(currentUnitText, trimmed);
       if (matches.length !== 1) {
-        setAddFormError(matches.length ? 'Cụm từ lặp lại: hãy bôi chọn đúng vị trí trong bài đọc.' : `Không tìm thấy "${trimmed}" trong đoạn/câu này.`);
+        setAddFormError(matches.length ? 'Repeated phrase: please highlight the exact occurrence in the text.' : `Could not find "${trimmed}" in this unit.`);
         return;
       }
       startOffset = matches[0].start;
@@ -232,7 +232,7 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
     );
 
     if (collision) {
-      setAddFormError(`Cụm từ này bị trùng với highlight đã có: "${collision.text}".`);
+      setAddFormError(`This phrase overlaps with an existing highlight: "${collision.text}".`);
       return;
     }
 
@@ -569,7 +569,7 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 bg-[#FF3838] border border-black inline-block"></span>
               <span className="text-xs font-mono font-black uppercase text-black">
-                Gắn nhãn cụm từ Highlight: "{selectedText}"
+                Highlight Phrase: "{selectedText}"
               </span>
             </div>
             <button
@@ -595,41 +595,41 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
           <form onSubmit={handleConfirmAddHighlight} className="grid grid-cols-1 md:grid-cols-12 gap-3">
             <div className="md:col-span-12">
               <label className="block text-[10px] font-mono font-bold uppercase mb-1">
-                Cụm từ hiển thị (tự động mở rộng trọn vẹn từ, có thể chỉnh sửa):
+                Display phrase (auto-expanded to whole words, editable):
               </label>
               <input
                 type="text"
                 value={selectedText}
                 onChange={e => handlePhraseTextChange(e.target.value)}
                 className="neo-input w-full text-sm font-reading font-bold bg-white py-1.5"
-                placeholder='vd: "Give it a shot"'
+                placeholder='e.g. "Give it a shot"'
                 required
               />
             </div>
 
             <div className="md:col-span-4">
               <label className="block text-[10px] font-mono font-bold uppercase mb-1">
-                Phân loại cụm từ:
+                Phrase Type:
               </label>
               <select
                 value={selectedPhraseType}
                 onChange={e => setSelectedPhraseType(e.target.value as PhraseType)}
                 className="neo-input w-full text-xs py-1.5"
               >
-                <option value="idiom">Idiom (Thành ngữ)</option>
-                <option value="phrasal_verb">Phrasal Verb (Cụm động từ)</option>
-                <option value="collocation">Collocation (Cụm từ cố định)</option>
-                <option value="fixed_expression">Fixed Expression (Cách diễn đạt)</option>
+                <option value="idiom">Idiom</option>
+                <option value="phrasal_verb">Phrasal Verb</option>
+                <option value="collocation">Collocation</option>
+                <option value="fixed_expression">Fixed Expression</option>
               </select>
             </div>
 
             <div className="md:col-span-5">
               <label className="block text-[10px] font-mono font-bold uppercase mb-1">
-                Ý nghĩa / Giải thích cho học sinh:
+                Meaning / Explanation for students:
               </label>
               <input
                 type="text"
-                placeholder='vd: "Thử làm điều gì đó mới mẻ"'
+                placeholder='e.g. "Try something new"'
                 value={selectedMeaning}
                 onChange={e => setSelectedMeaning(e.target.value)}
                 className="neo-input w-full text-xs py-1.5"
@@ -641,7 +641,7 @@ export const PhraseEditorStudio: React.FC<PhraseEditorStudioProps> = ({
                 type="submit"
                 className="neo-btn w-full py-2 bg-[#4ADE80] text-black text-xs font-black uppercase"
               >
-                <Check size={14} className="mr-1 inline" /> Thêm Highlight
+                <Check size={14} className="mr-1 inline" /> Add Highlight
               </button>
             </div>
           </form>

@@ -64,8 +64,8 @@ export function ReadingUnitText({ room, timeline, text = room.currentUnit?.text 
     let number=0;
     return <div className={className} style={{whiteSpace:'pre-wrap'}} data-erase-schedule="manual" data-erased-words={0} data-full-review="true">
       {paragraphs.map(range=><Fragment key={range.start}>
-        {text.slice(range.start,range.end).trim() ? <section data-review-paragraph={++number} aria-label={`Đoạn ${number}`} className="text-left border-b border-black/10 pb-3 mb-3 last:border-b-0">
-          <div aria-hidden="true" data-label={`Đoạn ${number}`} className="flex items-center gap-2 mb-2 text-xs font-mono font-bold text-neutral-600 after:content-[attr(data-label)]"><span className="inline-block w-2.5 h-2.5 bg-[#FF3838] border border-black" /></div>
+        {text.slice(range.start,range.end).trim() ? <section data-review-paragraph={++number} aria-label={`Paragraph ${number}`} className="text-left border-b border-black/10 pb-3 mb-3 last:border-b-0">
+          <div aria-hidden="true" data-label={`Paragraph ${number}`} className="flex items-center gap-2 mb-2 text-xs font-mono font-bold text-neutral-600 after:content-[attr(data-label)]"><span className="inline-block w-2.5 h-2.5 bg-[#FF3838] border border-black" /></div>
           <div>{renderRange(range.start,range.end)}</div>
         </section> : renderRange(range.start,range.end)}
         {renderRange(range.end,range.separatorEnd)}

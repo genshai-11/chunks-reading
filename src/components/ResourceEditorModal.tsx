@@ -362,7 +362,7 @@ export const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                 <label className="text-xs font-mono font-bold uppercase text-black">
-                  Nội dung bài đọc (Canonical Text) *
+                  Reading Content (Canonical Text) *
                 </label>
 
                 {/* View switcher: Full text vs Paragraph blocks */}
@@ -375,7 +375,7 @@ export const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
                         textEditView === 'full' ? 'bg-[#FFE500] text-black' : 'text-neutral-600 hover:text-black'
                       }`}
                     >
-                      Toàn văn ({paragraphs.length} đoạn)
+                      Full Text ({paragraphs.length} paragraphs)
                     </button>
                     <button
                       type="button"
@@ -384,16 +384,16 @@ export const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
                         textEditView === 'paragraphs' ? 'bg-[#FF3838] text-white' : 'text-neutral-600 hover:text-black'
                       }`}
                     >
-                      Từng đoạn văn ({paragraphs.length})
+                      Paragraphs ({paragraphs.length})
                     </button>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-xs font-mono text-neutral-600">
-                    <span className="font-bold text-black">{wordCount} từ</span>
+                    <span className="font-bold text-black">{wordCount} words</span>
                     <span>•</span>
-                    <span>{sentences.length} câu</span>
+                    <span>{sentences.length} sentences</span>
                     <span>•</span>
-                    <span className="font-bold text-[#FF3838]">{paragraphs.length} đoạn</span>
+                    <span className="font-bold text-[#FF3838]">{paragraphs.length} paragraphs</span>
                   </div>
                 </div>
               </div>
@@ -404,30 +404,30 @@ export const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
                     rows={8}
                     value={canonicalText}
                     onChange={e => setCanonicalText(e.target.value)}
-                    placeholder="Dán nội dung bài đọc tiếng Anh tại đây. Tách các đoạn văn bằng 1 dòng trống (Enter 2 lần)."
+                    placeholder="Paste English reading text here. Separate paragraphs with a blank line (press Enter twice)."
                     className="neo-input w-full text-sm font-reading leading-relaxed"
                   ></textarea>
                   <p className="text-[11px] font-mono text-neutral-500 mt-1">
-                    Mẹo: Nhấn Enter 2 lần (để lại 1 dòng trống) để phân tách giữa các đoạn văn (Paragraphs). Hoặc bấm tab "Từng đoạn văn" ở trên để chỉnh sửa số lượng đoạn văn.
+                    Tip: Press Enter twice (leave 1 blank line) to separate paragraphs. Or click the "Paragraphs" tab above to edit paragraph blocks directly.
                   </p>
                 </div>
               ) : (
                 /* Paragraph Blocks Mode */
                 <div className="space-y-3 p-3 bg-white border-2 border-black">
                   <div className="flex items-center justify-between text-xs font-mono font-bold text-neutral-700 pb-1 border-b border-black/15">
-                    <span>Quản lý danh sách đoạn văn ({paragraphs.length} đoạn)</span>
+                    <span>Manage paragraphs ({paragraphs.length} paragraphs)</span>
                     <button
                       type="button"
                       onClick={handleAddParagraph}
                       className="neo-btn-sm px-2.5 py-1 bg-[#4ADE80] text-black text-[11px] font-bold"
                     >
-                      + Thêm đoạn văn mới
+                      + Add New Paragraph
                     </button>
                   </div>
 
                   {paragraphs.length === 0 ? (
                     <div className="p-4 text-center text-xs font-mono text-neutral-400">
-                      Chưa có đoạn văn nào. Bấm "+ Thêm đoạn văn mới" để bắt đầu.
+                      No paragraphs yet. Click "+ Add New Paragraph" to get started.
                     </div>
                   ) : (
                     paragraphs.map((pText, pIdx) => {
@@ -438,7 +438,7 @@ export const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
                           <div className="flex items-center justify-between text-[11px] font-mono">
                             <span className="font-bold text-black flex items-center gap-1.5">
                               <span className="w-2 h-2 bg-[#FF3838] inline-block"></span>
-                              Đoạn #{pIdx + 1} ({pSentences.length} câu • {pWords} từ)
+                              Paragraph #{pIdx + 1} ({pSentences.length} sentences • {pWords} words)
                             </span>
 
                             <div className="flex items-center gap-1">
@@ -447,18 +447,18 @@ export const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
                                   type="button"
                                   onClick={() => handleMergeParagraphWithPrev(pIdx)}
                                   className="text-[10px] px-1.5 py-0.5 bg-neutral-100 hover:bg-neutral-200 border border-black"
-                                  title="Gộp nội dung này vào đoạn phía trên"
+                                  title="Merge this content into the paragraph above"
                                 >
-                                  Gộp với đoạn #{pIdx}
+                                  Merge with Paragraph #{pIdx}
                                 </button>
                               )}
                               <button
                                 type="button"
                                 onClick={() => handleRemoveParagraph(pIdx)}
                                 className="text-[10px] px-1.5 py-0.5 bg-red-100 hover:bg-red-200 text-red-700 border border-black"
-                                title="Xóa đoạn văn này"
+                                title="Delete this paragraph"
                               >
-                                Xóa đoạn
+                                Delete Paragraph
                               </button>
                             </div>
                           </div>
@@ -467,7 +467,7 @@ export const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
                             rows={3}
                             value={pText}
                             onChange={e => handleUpdateParagraph(pIdx, e.target.value)}
-                            placeholder={`Nội dung đoạn văn #${pIdx + 1}...`}
+                            placeholder={`Paragraph #${pIdx + 1} content...`}
                             className="neo-input w-full text-xs font-reading leading-relaxed"
                           ></textarea>
                         </div>
@@ -480,7 +480,7 @@ export const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
                     onClick={handleAddParagraph}
                     className="neo-btn w-full py-1.5 bg-[#FFE500] text-black text-xs font-bold"
                   >
-                    + Thêm đoạn văn mới
+                    + Add New Paragraph
                   </button>
                 </div>
               )}

@@ -44,10 +44,10 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-ping"></div>
           <span className="text-xs font-mono font-black uppercase text-black flex items-center gap-1.5">
-            <Monitor size={14} className="text-[#FF3838]" /> Live Learner View (Thời gian thực)
+            <Monitor size={14} className="text-[#FF3838]" /> Live Learner View (Real-time)
           </span>
           <span className="text-[10px] font-mono text-neutral-500 hidden sm:inline">
-            Giao diện chính xác của {participantsCount} học sinh đang kết nối
+            Exact view of {participantsCount} connected students
           </span>
         </div>
 
@@ -61,7 +61,7 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
                 : 'text-neutral-600 hover:text-black'
             }`}
           >
-            <Smartphone size={11} /> Màn hình điện thoại
+            <Smartphone size={11} /> Mobile screen
           </button>
           <button
             type="button"
@@ -72,7 +72,7 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
                 : 'text-neutral-600 hover:text-black'
             }`}
           >
-            <Monitor size={11} /> Màn hình máy tính
+            <Monitor size={11} /> Desktop screen
           </button>
         </div>
       </div>
@@ -110,32 +110,32 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
                 <div className="flex items-center gap-1">
                   {timeline.phase === 'hold' && (
                     <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1">
-                      Đang đọc ({Math.ceil((timeline.effectiveHoldMs - timeline.elapsedMs) / 1000)}s)
+                      Reading ({Math.ceil((timeline.effectiveHoldMs - timeline.elapsedMs) / 1000)}s)
                     </span>
                   )}
                   {timeline.phase === 'erase' && (
                     <span className="neo-badge bg-[#FF3838] text-white text-[9px] py-0 px-1">
-                      Đang xóa ({Math.ceil(timeline.remainingMs / 1000)}s)
+                      Erasing ({Math.ceil(timeline.remainingMs / 1000)}s)
                     </span>
                   )}
                   {timeline.phase === 'paused' && (
                     <span className="neo-badge bg-[#FFE500] text-black text-[9px] py-0 px-1">
-                      Tạm dừng
+                      Paused
                     </span>
                   )}
                   {timeline.phase === 'manual_show' && (
                     <span className="neo-badge bg-[#00D2FF] text-black text-[9px] py-0 px-1">
-                      Thảo luận
+                      Discussion
                     </span>
                   )}
                   {timeline.phase === 'blank_finished' && (
                     <span className="neo-badge bg-neutral-200 text-neutral-700 text-[9px] py-0 px-1">
-                      Đã ẩn
+                      Hidden
                     </span>
                   )}
                   {timeline.phase === 'idle' && (
                     <span className="neo-badge bg-neutral-200 text-neutral-700 text-[9px] py-0 px-1">
-                      Chờ phát
+                      Waiting to play
                     </span>
                   )}
                 </div>
@@ -153,8 +153,8 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
                     <Clock size={16} className="mx-auto text-neutral-400 animate-pulse" />
                     <div className="text-xs font-mono font-bold text-neutral-700">
                       {timeline.phase === 'blank_finished'
-                        ? 'Đoạn này đã kết thúc'
-                        : 'Màn hình học sinh đang trống (Chờ lệnh Play)'}
+                        ? 'This unit has ended'
+                        : 'Learner screen is blank (Waiting for Play)'}
                     </div>
                   </div>
                 )}
@@ -162,7 +162,7 @@ export const LiveLearnerPreview: React.FC<LiveLearnerPreviewProps> = ({
 
               {/* Footer Note */}
               <div className="pt-2 border-t border-black/10 flex items-center justify-between text-[9px] font-mono text-neutral-400">
-                <span>Hiệu ứng: {selectedEffect}</span>
+                <span>Effect: {selectedEffect}</span>
                 <span>{approvedSpans.length} Chunks Highlight</span>
               </div>
             </div>

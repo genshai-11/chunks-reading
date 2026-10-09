@@ -8,8 +8,9 @@ import { ERASE_EFFECT_OPTIONS, DEFAULT_DUST_ANGLE } from '../utils/eraseEffects'
 import { ReadingUnitText } from './ReadingUnitText';
 import { ReadingCountdown } from './ReadingCountdown';
 import React, { useState, useEffect, useRef } from 'react';
-import { ClassroomRoom, CalculatedTimeline, ApprovedSpan, RoomParticipant, EraseEffect } from '../types';
+import { ClassroomRoom, CalculatedTimeline, ApprovedSpan, RoomParticipant, EraseEffect, EraseSchedule } from '../types';
 import { getSyncedRoomTimeline } from '../services/roomClock';
+import { getSequentialTiming } from '../utils/readingTiming';
 import { useRoomClock } from './useRoomClock';
 
 import {
@@ -25,7 +26,8 @@ import {
   RotateCcw,
   StopCircle,
   X,
-  Sliders
+  Sliders,
+  Timer
 } from 'lucide-react';
 
 interface LiveLearnerViewProps {
@@ -38,8 +40,9 @@ interface LiveLearnerViewProps {
   onSelectEraseEffect?: (effect: EraseEffect) => void;
   stagedHoldMs?: number;
   stagedEraseMs?: number;
+  stagedEraseSchedule?: EraseSchedule;
+  onSelectEraseSchedule?: (schedule: EraseSchedule) => void;
 }
-
 export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
   room,
   participants,
@@ -50,6 +53,8 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
   onSelectEraseEffect,
   stagedHoldMs = 3000,
   stagedEraseMs = 1000,
+  stagedEraseSchedule = 'after_reading',
+  onSelectEraseSchedule,
 }) => {
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('desktop');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -66,6 +71,17 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
       setActiveEffect(stagedEraseEffect);
     }
   }, [stagedEraseEffect]);
+
+  // Local erase schedule selection for previewing & testing
+  const [activeSchedule, setActiveSchedule] = useState<EraseSchedule>(
+    stagedEraseSchedule || room.eraseSchedule || 'after_reading'
+  );
+
+  useEffect(() => {
+    if (stagedEraseSchedule) {
+      setActiveSchedule(stagedEraseSchedule);
+    }
+  }, [stagedEraseSchedule]);
 
   // Simulation state
   const [isSimulating, setIsSimulating] = useState(false);
@@ -87,46 +103,85 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
 
     simStartTimeRef.current = performance.now();
     let animId: number;
-    const totalSimDuration = stagedHoldMs + stagedEraseMs + 1200; // includes 1.2s blank pause
 
     const simLoop = (now: number) => {
-      const elapsed = (now - simStartTimeRef.current) % totalSimDuration;
+      const unitText = room.currentUnit?.text || '';
 
-      if (elapsed < stagedHoldMs) {
-        // Hold phase
-        setSimTimeline({
-          phase: 'hold',
-          progress: 0,
-          remainingMs: stagedHoldMs - elapsed,
-          totalDurationMs: stagedHoldMs + stagedEraseMs,
-          effectiveHoldMs: stagedHoldMs,
-          effectiveEraseMs: stagedEraseMs,
-          elapsedMs: elapsed,
-        });
-      } else if (elapsed < stagedHoldMs + stagedEraseMs) {
-        // Erase phase
-        const eraseElapsed = elapsed - stagedHoldMs;
-        const progress = Math.min(1, eraseElapsed / stagedEraseMs);
-        setSimTimeline({
-          phase: 'erase',
-          progress,
-          remainingMs: stagedEraseMs - eraseElapsed,
-          totalDurationMs: stagedHoldMs + stagedEraseMs,
-          effectiveHoldMs: stagedHoldMs,
-          effectiveEraseMs: stagedEraseMs,
-          elapsedMs: elapsed,
-        });
+      if (activeSchedule === 'word_groups') {
+        const seqTiming = getSequentialTiming(
+          {
+            wordsPerSecond: room.wordsPerSecond,
+            timingMode: room.timingMode,
+            holdDurationMs: stagedHoldMs,
+            eraseDurationMs: stagedEraseMs,
+          },
+          unitText
+        );
+        const totalSimDuration = seqTiming.totalMs + 1200; // includes 1.2s blank pause
+        const elapsed = (now - simStartTimeRef.current) % totalSimDuration;
+
+        if (elapsed < seqTiming.totalMs) {
+          const progress = Math.min(1, elapsed / Math.max(1, seqTiming.totalMs));
+          setSimTimeline({
+            phase: elapsed < seqTiming.readingMs ? 'hold' : 'erase',
+            progress,
+            remainingMs: Math.max(0, seqTiming.totalMs - elapsed),
+            totalDurationMs: seqTiming.totalMs,
+            effectiveHoldMs: seqTiming.readingMs,
+            effectiveEraseMs: seqTiming.lagMs,
+            elapsedMs: elapsed,
+          });
+        } else {
+          setSimTimeline({
+            phase: 'blank_finished',
+            progress: 1,
+            remainingMs: 0,
+            totalDurationMs: seqTiming.totalMs,
+            effectiveHoldMs: seqTiming.readingMs,
+            effectiveEraseMs: seqTiming.lagMs,
+            elapsedMs: elapsed,
+          });
+        }
       } else {
-        // Finished blank phase
-        setSimTimeline({
-          phase: 'blank_finished',
-          progress: 1,
-          remainingMs: 0,
-          totalDurationMs: stagedHoldMs + stagedEraseMs,
-          effectiveHoldMs: stagedHoldMs,
-          effectiveEraseMs: stagedEraseMs,
-          elapsedMs: elapsed,
-        });
+        const totalSimDuration = stagedHoldMs + stagedEraseMs + 1200; // includes 1.2s blank pause
+        const elapsed = (now - simStartTimeRef.current) % totalSimDuration;
+
+        if (elapsed < stagedHoldMs) {
+          // Hold phase
+          setSimTimeline({
+            phase: 'hold',
+            progress: 0,
+            remainingMs: stagedHoldMs - elapsed,
+            totalDurationMs: stagedHoldMs + stagedEraseMs,
+            effectiveHoldMs: stagedHoldMs,
+            effectiveEraseMs: stagedEraseMs,
+            elapsedMs: elapsed,
+          });
+        } else if (elapsed < stagedHoldMs + stagedEraseMs) {
+          // Erase phase
+          const eraseElapsed = elapsed - stagedHoldMs;
+          const progress = Math.min(1, eraseElapsed / stagedEraseMs);
+          setSimTimeline({
+            phase: 'erase',
+            progress,
+            remainingMs: stagedEraseMs - eraseElapsed,
+            totalDurationMs: stagedHoldMs + stagedEraseMs,
+            effectiveHoldMs: stagedHoldMs,
+            effectiveEraseMs: stagedEraseMs,
+            elapsedMs: elapsed,
+          });
+        } else {
+          // Finished blank phase
+          setSimTimeline({
+            phase: 'blank_finished',
+            progress: 1,
+            remainingMs: 0,
+            totalDurationMs: stagedHoldMs + stagedEraseMs,
+            effectiveHoldMs: stagedHoldMs,
+            effectiveEraseMs: stagedEraseMs,
+            elapsedMs: elapsed,
+          });
+        }
       }
 
       animId = requestAnimationFrame(simLoop);
@@ -134,7 +189,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
 
     animId = requestAnimationFrame(simLoop);
     return () => cancelAnimationFrame(animId);
-  }, [isSimulating, stagedHoldMs, stagedEraseMs]);
+  }, [isSimulating, stagedHoldMs, stagedEraseMs, activeSchedule, room.wordsPerSecond, room.timingMode, room.currentUnit?.text]);
 
   useRoomClock(room.id);
   // Live timeline synced with classroom room when NOT simulating
@@ -192,6 +247,16 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
     }
   };
 
+  const handleSelectSchedule = (sched: EraseSchedule) => {
+    setActiveSchedule(sched);
+    if (onSelectEraseSchedule) {
+      onSelectEraseSchedule(sched);
+    }
+    if (isSimulating) {
+      simStartTimeRef.current = performance.now();
+    }
+  };
+
   const handleToggleSimulation = () => {
     if (!isSimulating) {
       simStartTimeRef.current = performance.now();
@@ -224,11 +289,11 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
               Live Learner View
               {isSimulating ? (
                 <span className="neo-badge bg-[#FFE500] text-black text-[9px] py-0 px-1.5 font-mono font-bold">
-                  🧪 Chế độ mô phỏng cục bộ (Không ảnh hưởng học sinh)
+                  🧪 Local simulation mode (Does not affect students)
                 </span>
               ) : (
                 <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-mono">
-                  Màn hình học sinh thời gian thực
+                  Real-time student view
                 </span>
               )}
             </h3>
@@ -244,7 +309,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
               className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase flex items-center gap-1 ${
                 viewMode === 'desktop' ? 'bg-black text-white' : 'text-neutral-700 hover:text-black'
               }`}
-              title="Xem cỡ Desktop / Laptop"
+              title="View Desktop / Laptop size"
             >
               <Monitor size={11} /> Desktop
             </button>
@@ -254,7 +319,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
               className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase flex items-center gap-1 ${
                 viewMode === 'mobile' ? 'bg-black text-white' : 'text-neutral-700 hover:text-black'
               }`}
-              title="Xem cỡ điện thoại di động"
+              title="View Mobile phone size"
             >
               <Smartphone size={11} /> Mobile
             </button>
@@ -264,10 +329,10 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
             type="button"
             onClick={handleCopyLink}
             className="neo-btn-sm px-2 py-0.5 bg-[#FFE500] text-black text-[11px] font-bold font-mono flex items-center gap-1"
-            title="Copy link tham gia cho học sinh (không cần đăng nhập)"
+            title="Copy student join link (no sign-in required)"
           >
             {copiedLink ? <Check size={11} className="text-green-700" /> : <Copy size={11} />}
-            <span>{copiedLink ? 'Đã copy!' : 'Copy Link'}</span>
+            <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
           </button>
 
           <a
@@ -275,10 +340,10 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             className="neo-btn-sm px-2 py-0.5 bg-white text-black text-[11px] font-bold font-mono flex items-center gap-1 hover:bg-neutral-100"
-            title="Mở tab mới thử nghiệm như một học sinh"
+            title="Open new tab to test as a student"
           >
             <ExternalLink size={11} />
-            <span className="hidden sm:inline">Mở tab mới</span>
+            <span className="hidden sm:inline">Open new tab</span>
           </a>
 
           {onClose && (
@@ -286,7 +351,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
               type="button"
               onClick={onClose}
               className="p-1 hover:bg-neutral-200 border border-black"
-              title="Đóng bản xem trước"
+              title="Close preview"
             >
               <X size={12} />
             </button>
@@ -296,26 +361,64 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
 
       {/* Teacher Simulation & Effect Control Toolbar */}
       <div className="p-2 bg-[#FFFDF0] border border-black flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="font-bold text-neutral-800 flex items-center gap-1">
-            <Sliders size={12} />
-            Hiệu ứng xóa:
-          </span>
-          <div className="inline-flex flex-wrap border border-black bg-white p-0.5 shadow-[1px_1px_0px_#000]">
-            {ERASE_EFFECT_OPTIONS.map(eff => (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-bold text-neutral-800 flex items-center gap-1">
+              <Sliders size={12} />
+              Erase Effect:
+            </span>
+            <div className="inline-flex flex-wrap border border-black bg-white p-0.5 shadow-[1px_1px_0px_#000]">
+              {ERASE_EFFECT_OPTIONS.map(eff => (
+                <button
+                  key={eff.id}
+                  type="button"
+                  onClick={() => handleSelectEffect(eff.id)}
+                  aria-pressed={activeEffect === eff.id}
+                  className={`px-2 py-0.5 font-bold transition-all ${
+                    activeEffect === eff.id ? eff.activeBg : 'text-neutral-700 hover:text-black'
+                  }`}
+                  title={`Select ${eff.label} effect and save settings`}
+                >
+                  {eff.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Module: Simulation Erase Schedule */}
+          <div className="flex flex-wrap items-center gap-1.5" data-testid="sim-erase-schedule-control">
+            <span className="font-bold text-neutral-800 flex items-center gap-1">
+              <Timer size={12} />
+              Erase Mechanism:
+            </span>
+            <div className="inline-flex border border-black bg-white p-0.5 shadow-[1px_1px_0px_#000]">
               <button
-                key={eff.id}
                 type="button"
-                onClick={() => handleSelectEffect(eff.id)}
-                aria-pressed={activeEffect === eff.id}
+                onClick={() => handleSelectSchedule('after_reading')}
+                aria-pressed={activeSchedule === 'after_reading'}
                 className={`px-2 py-0.5 font-bold transition-all ${
-                  activeEffect === eff.id ? eff.activeBg : 'text-neutral-700 hover:text-black'
+                  activeSchedule === 'after_reading'
+                    ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]'
+                    : 'text-neutral-700 hover:text-black'
                 }`}
-                title={`Chọn hiệu ứng ${eff.label} và lưu cấu hình`}
+                title="Simulation: Read entire unit then erase"
               >
-                {eff.label}
+                Erase after reading
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => handleSelectSchedule('word_groups')}
+                aria-pressed={activeSchedule === 'word_groups'}
+                className={`px-2 py-0.5 font-bold transition-all ${
+                  activeSchedule === 'word_groups'
+                    ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]'
+                    : 'text-neutral-700 hover:text-black'
+                }`}
+                title="Simulation: Erase sequentially while reading"
+              >
+                Erase while reading
+              </button>
+            </div>
           </div>
         </div>
 
@@ -329,10 +432,10 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
                 ? 'bg-[#FF3838] text-white hover:bg-red-600'
                 : 'bg-[#4ADE80] text-black hover:bg-green-400'
             }`}
-            title="Chạy thử hiệu ứng xóa lặp lại cục bộ mà không phát tới học sinh"
+            title="Test erase effect loop locally without broadcasting to students"
           >
             {isSimulating ? <StopCircle size={12} /> : <Play size={12} />}
-            <span>{isSimulating ? 'Dừng mô phỏng' : 'Chạy thử mô phỏng'}</span>
+            <span>{isSimulating ? 'Stop Simulation' : 'Start Simulation'}</span>
           </button>
 
           {isSimulating && (
@@ -340,15 +443,15 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
               type="button"
               onClick={handleRestartSimulation}
               className="neo-btn-sm px-2 py-0.5 bg-white text-black text-xs font-bold flex items-center gap-1"
-              title="Chạy lại từ đầu"
+              title="Restart from beginning"
             >
               <RotateCcw size={11} />
-              <span>Chạy lại</span>
+              <span>Restart</span>
             </button>
           )}
 
           <span className="text-[10px] text-neutral-500 hidden md:inline">
-            (Giữ: {stagedHoldMs}ms, Xóa: {stagedEraseMs}ms)
+            (Hold: {stagedHoldMs}ms, Erase: {stagedEraseMs}ms · {activeSchedule === 'word_groups' ? 'Erase while reading' : 'Erase after reading'})
           </span>
         </div>
       </div>
@@ -362,7 +465,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
           <div className="flex items-center justify-between text-[10px] font-mono text-neutral-300 px-1">
             <div className="flex items-center gap-1.5">
               <span className="bg-[#FFE500] text-black px-1 font-bold">
-                {isSimulating ? 'MÔ PHỎNG' : `ROOM: ${room.id}`}
+                {isSimulating ? 'SIMULATION' : `ROOM: ${room.id}`}
               </span>
               <span className="truncate max-w-[150px]">
                 {room.resourceTitle}
@@ -411,7 +514,9 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
                   ? 'Full Text Review'
                   : `${unitLabel} #${((currentUnit?.index ?? 0) + 1)} / ${currentUnit?.totalUnits || 1}`}
               </span>
-              <span className="font-bold text-neutral-700">Effect: {isSimulating ? activeEffect : (room.eraseEffect || 'vaporize')}</span>
+              <span className="font-bold text-neutral-700">
+                Effect: {isSimulating ? activeEffect : (room.eraseEffect || 'vaporize')} · {isSimulating ? (activeSchedule === 'word_groups' ? 'Erase while reading' : 'Erase after reading') : (room.eraseSchedule === 'word_groups' ? 'Erase while reading' : 'Erase after reading')}
+              </span>
             </div>
 
             {/* Reading Content Center */}
@@ -424,7 +529,7 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
                   <ReadingUnitText room={room} timeline={activeTimeline} onAnnotationClick={setActiveTooltip}
                     className="font-reading text-base leading-relaxed text-[#111111]" />                </div>
               ) : isTextVisible && currentUnit?.text ? (
-                <ReadingUnitText room={isSimulating ? { ...room, eraseEffect: activeEffect, dustAngle: stagedDustAngle, eraseSchedule: 'after_reading' } : room}
+                <ReadingUnitText room={isSimulating ? { ...room, eraseEffect: activeEffect, dustAngle: stagedDustAngle, eraseSchedule: activeSchedule } : room}
                   timeline={activeTimeline} onAnnotationClick={setActiveTooltip}
                   className={`w-full text-center max-w-xl font-reading ${viewMode === 'mobile' ? 'text-lg leading-relaxed' : 'text-xl sm:text-2xl leading-relaxed'} text-[#111111] font-normal`} />
               ) : (
@@ -461,9 +566,9 @@ export const LiveLearnerView: React.FC<LiveLearnerViewProps> = ({
 
             <div className="text-[9px] font-mono text-neutral-400 pt-1 border-t border-black/10 flex justify-between">
               <span>
-                {isSimulating ? '🧪 Chế độ mô phỏng thử nghiệm' : `Đồng bộ tức thời với phòng ${room.id}`}
+                {isSimulating ? '🧪 Test simulation mode' : `Real-time sync with room ${room.id}`}
               </span>
-              <span>{approvedSpans.length} cụm từ highlight</span>
+              <span>{approvedSpans.length} highlighted chunks</span>
             </div>
           </div>
         </div>

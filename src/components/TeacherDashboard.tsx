@@ -54,6 +54,7 @@ import { ResourceEditorModal } from './ResourceEditorModal';
 import { PhraseReviewModal } from './PhraseReviewModal';
 import { TimingPreview } from './TimingPreview';
 import { PhraseEditorStudio } from './PhraseEditorStudio';
+import { ResourceSelectCombobox } from './ResourceSelectCombobox';
 import { LiveLearnerView } from './LiveLearnerView';
 import { LiveLearnerPreview } from './LiveLearnerPreview';
 import { DustDirectionControl } from './DustDirectionControl';
@@ -93,18 +94,20 @@ import {
   ExternalLink,
   Monitor,
   LayoutGrid,
+  List,
+  Table,
   Maximize,
   Minimize,
 } from 'lucide-react';
 
 const ERASE_EFFECT_NAMES: Record<EraseEffect, string> = {
-  vaporize: 'Tan biến',
-  dissolve: 'Hòa tan',
-  fade: 'Mờ dần',
-  wipe: 'Gạt cuộn',
-  eraser: 'Gôm lau',
-  dust: 'Bụi chữ bay',
-  sparkle: 'Làn sáng cuốn chữ',
+  vaporize: 'Vaporize',
+  dissolve: 'Dissolve',
+  fade: 'Fade',
+  wipe: 'Wipe',
+  eraser: 'Eraser',
+  dust: 'Word Dust',
+  sparkle: 'Sparkle Wave',
 };
 
 interface TeacherDashboardProps {
@@ -123,7 +126,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [statusTab, setStatusTab] = useState<'all' | 'published' | 'draft'>('all');
-
+  const [libraryViewMode, setLibraryViewMode] = useState<'grid' | 'list' | 'table'>('table');
   // Modals & Studio state
   const [editingResource, setEditingResource] = useState<ReadingResource | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -135,8 +138,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeMainTab, setActiveMainTab] = useTeacherTabRoute();
   const [selectedQuickSwitchId, setSelectedQuickSwitchId] = useState<string>('');
+  const [quickSwitchCategory, setQuickSwitchCategory] = useState<string>('all');
   const [selectedSetupResourceId, setSelectedSetupResourceId] = useState<string>('');
-
+  const [setupCategory, setSetupCategory] = useState<string>('all');
   // Active Live Room state
   const [activeRoom, setActiveRoom] = useState<ClassroomRoom | null>(null);
   const [participants, setParticipants] = useState<RoomParticipant[]>([]);
@@ -214,9 +218,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     try {
       if (document.fullscreenElement === readingAreaRef.current) await document.exitFullscreen();
       else if (readingAreaRef.current?.requestFullscreen) await readingAreaRef.current.requestFullscreen();
-      else throw new Error('Trình duyệt không hỗ trợ fullscreen.');
+      else throw new Error('Fullscreen is not supported by your browser.');
     } catch (error) {
-      setDashboardNotice({ type: 'error', text: error instanceof Error ? error.message : 'Không mở được fullscreen.' });
+      setDashboardNotice({ type: 'error', text: error instanceof Error ? error.message : 'Failed to enter fullscreen.' });
     }
   };
 
@@ -267,7 +271,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       }
     } catch (err: any) {
       console.error('Error loading resources:', err);
-      setDashboardNotice({ type: 'error', text: `Lỗi tải tài nguyên: ${err?.message || 'Không thể kết nối'}` });
+      setDashboardNotice({ type: 'error', text: `Failed to load resources: ${err?.message || 'Unable to connect'}` });
     } finally {
       setLoadingResources(false);
     }
@@ -387,7 +391,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         setActiveMainTab('live');
         setDashboardNotice({
           type: 'success',
-          text: `Đã chuyển sang bài đọc mới: "${res.title}" trong phòng hiện tại!`,
+          text: `Switched to new reading passage: "${res.title}" in current room!`,
         });
         return;
       }
@@ -413,15 +417,15 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       setActiveMainTab('live');
       setDashboardNotice({
         type: 'success',
-        text: `Phòng học ${newRoom.id} đã mở! Học sinh có thể truy cập bằng link hoặc mã ${newRoom.id}.`,
+        text: `Classroom ${newRoom.id} is open! Students can join using link or code ${newRoom.id}.`,
       });
     } catch (err: any) {
       console.error('Could not create or reuse classroom:', err);
-      setDashboardNotice({ type: 'error', text: err?.message || 'Lỗi không xác định khi mở phòng' });
+      setDashboardNotice({ type: 'error', text: err?.message || 'Unknown error opening room' });
     }
   };
 
-  // Sync full speeches (Steve Jobs + 5 TED Talks)
+  // Sync full sample library (Steve Jobs + 5 TED Talks + 10 IELTS + 10 Naval Ravikant)
   const handleSyncFullResources = async () => {
     setIsSyncing(true);
     setDashboardNotice(null);
@@ -431,10 +435,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       if (data.length > 0) setStudioResource(data[0]);
       setDashboardNotice({
         type: 'success',
-        text: 'Đã tải và đồng bộ thành công trọn vẹn 5 bài TED Talk & bài phát biểu Steve Jobs (hơn 30–50 câu mỗi bài)!',
+        text: 'Successfully loaded and synced all 26 sample reading articles (Steve Jobs, 5 TED Talks, 10 IELTS Reading, 10 Naval Ravikant)!',
       });
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Lỗi đồng bộ bài đọc: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Failed to sync reading articles: ${err.message}` });
     } finally {
       setIsSyncing(false);
     }
@@ -445,9 +449,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     try {
       await publishResource(resId);
       await loadResources();
-      setDashboardNotice({ type: 'success', text: 'Đã xuất bản bài đọc thành công!' });
+      setDashboardNotice({ type: 'success', text: 'Successfully published reading article!' });
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Xuất bản thất bại: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Failed to publish: ${err.message}` });
     }
   };
 
@@ -456,9 +460,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     try {
       await deleteResource(resId);
       await loadResources();
-      setDashboardNotice({ type: 'info', text: 'Đã xóa bài đọc khỏi thư viện.' });
+      setDashboardNotice({ type: 'info', text: 'Reading article deleted from library.' });
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Xóa thất bại: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Failed to delete: ${err.message}` });
     }
   };
 
@@ -482,9 +486,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         stagedDustAngle,
         getStagedRoomOptions(activePresentedResource)
       );
-      setDashboardNotice({ type: 'success', text: `Đã lưu cài đặt và áp dụng đoạn #${stagedUnitIndex + 1} sang màn hình học sinh.` });
+      setDashboardNotice({ type: 'success', text: `Settings saved and unit #${stagedUnitIndex + 1} applied to student screens.` });
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Áp dụng thất bại: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Failed to apply: ${err.message}` });
     } finally {
       setIsApplying(false);
     }
@@ -497,7 +501,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     try {
       await playTurnCommand(currentRoom.id, currentRoom.revision);
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Lỗi phát: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Playback error: ${err.message}` });
     }
   };
 
@@ -507,7 +511,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     try {
       await pauseTurnCommand(currentRoom.id, currentRoom.revision, getSyncedRoomTimeline(currentRoom).elapsedMs);
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Lỗi tạm dừng: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Pause error: ${err.message}` });
     }
   };
 
@@ -517,7 +521,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     try {
       await resumeTurnCommand(currentRoom.id, currentRoom.revision, currentRoom.pausedElapsedMs);
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Lỗi tiếp tục: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Resume error: ${err.message}` });
     }
   };
 
@@ -528,13 +532,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       let revision = currentRoom.revision;
       if (!showFullArticlePreview && !currentRoom.isFullReview && !currentRoom.currentUnit?.isFullReview && currentRoom.granularity !== stagedGranularity) {
         const resource = activePresentedResourceRef.current;
-        if (!resource) throw new Error('Bài đọc đang tải. Vui lòng thử lại.');
+        if (!resource) throw new Error('Reading article is loading. Please try again.');
         await selectAppliedUnitCommand(currentRoom.id, revision, resource, stagedUnitIndex, stagedGranularity);
         revision = Math.max(revision + 1, activeRoomRef.current?.revision ?? 0);
       }
       await showTurnCommand(currentRoom.id, revision);
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Lỗi hiển thị: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Display error: ${err.message}` });
     }
   };
 
@@ -544,7 +548,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     try {
       await hideTurnCommand(currentRoom.id, currentRoom.revision);
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Lỗi ẩn màn hình: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Hide error: ${err.message}` });
     }
   };
 
@@ -553,9 +557,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     try {
       await endRoomCommand(activeRoom.id, activeRoom.revision);
       setActiveRoom(null);
-      setDashboardNotice({ type: 'info', text: 'Đã kết thúc buổi học trực tiếp.' });
+      setDashboardNotice({ type: 'info', text: 'Live classroom session ended.' });
     } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Lỗi kết thúc phòng: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Failed to end room: ${err.message}` });
     }
   };
 
@@ -582,6 +586,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     return matchesSearch && matchesCategory && matchesLevel && matchesStatus;
   });
 
+  const quickSwitchFilteredResources = quickSwitchCategory === 'all'
+    ? resources
+    : resources.filter(r => r.category === quickSwitchCategory);
+
+  const setupFilteredResources = setupCategory === 'all'
+    ? resources
+    : resources.filter(r => r.category === setupCategory);
   // Calculate staged unit text and slices for private teacher preview
   const rawUnitsList = activePresentedResource
     ? stagedGranularity === 'sentence'
@@ -624,7 +635,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         await selectAppliedUnitCommand(room.id, room.revision, resource, index, newGranularity);
         setStagedUnitIndex(index);
         unitReviewModeRef.current = false; setUnitReviewMode(false);
-      } catch (error) { setDashboardNotice({type:'error',text:error instanceof Error ? error.message : 'Không thoát được review toàn bài.'}); }
+      } catch (error) { setDashboardNotice({type:'error',text:error instanceof Error ? error.message : 'Failed to exit full article review.'}); }
     }
   };
 
@@ -645,11 +656,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       setDashboardNotice({
         type: nextReview ? 'success' : 'info',
         text: nextReview
-          ? 'Đã bật chế độ Xem lại toàn bộ bài đọc! Màn hình học sinh đang hiển thị toàn văn không giới hạn thời gian.'
-          : 'Đã tắt chế độ Xem lại toàn bộ bài đọc. Trở về nhịp đọc từng câu/đoạn.',
+          ? 'Full Reading Passage Review mode enabled! Student screen is displaying full text without time limit.'
+          : 'Full Reading Passage Review mode disabled. Returned to unit reading pace.',
       });
-    } catch (err: any) {
-      setDashboardNotice({ type: 'error', text: `Lỗi bật review toàn bộ: ${err.message}` });
+    } catch (err: unknown) {
+      setDashboardNotice({ type: 'error', text: `Failed to toggle full review: ${err instanceof Error ? err.message : String(err)}` });
     }
   };
 
@@ -658,7 +669,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     if (!activeRoom || !activePresentedResource) return;
     try {
       await selectAppliedUnitCommand(activeRoom.id, activeRoom.revision, activePresentedResource, reviewReturnIndex.current);
-      setDashboardNotice({ type: 'info', text: 'Đã thoát chế độ Review toàn bài.' });
+      setDashboardNotice({ type: 'info', text: 'Exited Full Reading Review mode.' });
     } catch (err: any) {
       console.error('Error exiting review:', err);
     }
@@ -680,7 +691,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         else await playTurnCommand(currentRoom.id, Math.max(revision, currentRoom.revision + 1));
       }
     } catch (error) {
-      setDashboardNotice({ type: 'error', text: error instanceof Error ? error.message : 'Lỗi chuyển đơn vị đọc.' });
+      setDashboardNotice({ type: 'error', text: error instanceof Error ? error.message : 'Error switching reading unit.' });
     }
   };
   const handleAdvanceAndPlay = () => navigateAppliedUnit(1, true);
@@ -694,7 +705,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       else await playTurnCommand(currentRoom.id, currentRoom.revision);
     } catch (err: any) {
       console.error('Error replaying current unit:', err);
-      setDashboardNotice({ type: 'error', text: `Lỗi phát lại: ${err.message}` });
+      setDashboardNotice({ type: 'error', text: `Replay error: ${err instanceof Error ? err.message : String(err)}` });
     }
   };
 
@@ -804,7 +815,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           setAutoAdvance(false);
           setDashboardNotice({
             type: 'success',
-            text: 'Đã hoàn thành tự động chuyển câu toàn bộ bài đọc!',
+            text: 'Successfully completed auto-advance for the entire passage!',
           });
         }
       }, 1500);
@@ -836,7 +847,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         <div className="flex items-center gap-2">
           <Layers size={16} className="text-black" />
           <h2 className="text-sm font-black uppercase tracking-tight text-black">
-            Thư viện bài đọc ({filteredResources.length})
+            Reading Library ({filteredResources.length})
           </h2>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -845,10 +856,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             disabled={isSyncing}
             onClick={handleSyncFullResources}
             className="neo-btn-sm px-2.5 py-1 bg-[#4ADE80] text-black text-[11px] font-bold flex items-center gap-1 hover:bg-green-400"
-            title="Đồng bộ lại toàn bộ 5 bài TED Talk & bài phát biểu Steve Jobs (đầy đủ hơn 30-50 câu mỗi bài)"
+            title="Sync all 26 sample reading articles (Steve Jobs, 5 TED Talks, 10 IELTS Reading, 10 Naval Ravikant)"
           >
             <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-            <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ 5 TED & Steve Jobs'}</span>
+            <span>{isSyncing ? 'Syncing...' : 'Sync Sample Library (26 articles)'}</span>
           </button>
           <button
             type="button"
@@ -858,7 +869,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             }}
             className="neo-btn-sm px-2 py-1 bg-[#FFE500] text-black text-[11px] font-bold"
           >
-            <Plus size={12} className="mr-0.5" /> Thêm bài
+            <Plus size={12} className="mr-0.5" /> New Article
           </button>
           {isDrawerMode && (
             <button
@@ -872,82 +883,449 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         </div>
       </div>
 
-      {/* Status tabs: All / Published / Draft */}
-      <div className="flex border border-black text-xs font-mono font-bold shadow-[1px_1px_0px_#000]">
-        <button
-          type="button"
-          onClick={() => setStatusTab('all')}
-          className={`flex-1 py-1 text-center ${statusTab === 'all' ? 'bg-black text-white' : 'bg-white text-black'}`}
-        >
-          Tất cả ({resources.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setStatusTab('published')}
-          className={`flex-1 py-1 text-center border-l border-black ${statusTab === 'published' ? 'bg-[#4ADE80] text-black' : 'bg-white text-black'}`}
-        >
-          Published ({resources.filter(r => r.status === 'published').length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setStatusTab('draft')}
-          className={`flex-1 py-1 text-center border-l border-black ${statusTab === 'draft' ? 'bg-[#FFE500] text-black' : 'bg-white text-black'}`}
-        >
-          Draft ({resources.filter(r => r.status === 'draft').length})
-        </button>
-      </div>
+      {/* Redesigned Unified Single-Row Library Toolbar */}
+      <div
+        data-testid="library-filter-toolbar"
+        className="bg-[#FFFDF0] border-2 border-black p-1.5 shadow-[2px_2px_0px_#000] flex flex-wrap items-center justify-between gap-2 text-xs font-mono"
+      >
+        {/* Left: Search + Category Icon Filter + Level Icon Filter */}
+        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[260px]">
+          {/* Search bar */}
+          <div className="relative flex-1 min-w-[140px] max-w-xs">
+            <Search size={13} className="absolute left-2.5 top-2 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search articles..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="neo-input w-full text-xs py-1 pl-7 pr-2 bg-white"
+            />
+          </div>
 
-      {/* Search & Category Filter */}
-      <div className="space-y-2">
-        <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-2.5 text-neutral-400" />
-          <input
-            type="text"
-            placeholder="Tìm theo tiêu đề, chủ đề, nội dung..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="neo-input w-full text-xs pl-8"
-          />
+          {/* Category Dropdown with Icon */}
+          <div className="flex items-center gap-1 bg-white border border-black px-1.5 py-0.5 shadow-[1px_1px_0px_#000]" title="Filter by category">
+            <Filter size={12} className="text-neutral-500 shrink-0" />
+            <select
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+              aria-label="Filter by category"
+              className="bg-transparent text-xs font-bold py-0.5 pr-0 outline-none cursor-pointer max-w-[130px] truncate"
+            >
+              <option value="all">All Topics</option>
+              {existingCategories.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Level Dropdown with Icon */}
+          <div className="flex items-center gap-1 bg-white border border-black px-1.5 py-0.5 shadow-[1px_1px_0px_#000]" title="Filter by level">
+            <Sparkles size={11} className="text-neutral-500 shrink-0" />
+            <select
+              value={selectedLevel}
+              onChange={e => setSelectedLevel(e.target.value)}
+              aria-label="Filter by level"
+              className="bg-transparent text-xs font-bold py-0.5 pr-0 outline-none cursor-pointer max-w-[95px]"
+            >
+              <option value="all">All Levels</option>
+              <option value="B1 Intermediate">B1 Inter</option>
+              <option value="B2 Upper-Intermediate">B2 Upper</option>
+              <option value="C1 Advanced">C1 Adv</option>
+            </select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={selectedCategory}
-            onChange={e => setSelectedCategory(e.target.value)}
-            className="neo-input text-xs py-1"
-          >
-            <option value="all">Tất cả chủ đề</option>
-            {existingCategories.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+        {/* Right: Status Tabs + View Mode Toggle */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Status Tabs: Compact icon/badge format */}
+          <div className="inline-flex border border-black bg-white p-0.5 shadow-[1px_1px_0px_#000]" role="tablist" aria-label="Article status">
+            <button
+              type="button"
+              onClick={() => setStatusTab('all')}
+              aria-pressed={statusTab === 'all'}
+              title={`All (${resources.length})`}
+              className={`px-2 py-0.5 font-bold text-[11px] transition-all ${
+                statusTab === 'all' ? 'bg-black text-white' : 'text-neutral-700 hover:text-black'
+              }`}
+            >
+              All ({resources.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('published')}
+              aria-pressed={statusTab === 'published'}
+              title={`Published (${resources.filter(r => r.status === 'published').length})`}
+              className={`px-1.5 py-0.5 font-bold text-[11px] transition-all flex items-center gap-1 ${
+                statusTab === 'published' ? 'bg-[#4ADE80] text-black shadow-[1px_1px_0px_#000]' : 'text-neutral-700 hover:text-black'
+              }`}
+            >
+              <CheckCircle size={11} />
+              <span className="hidden sm:inline">Pub</span>
+              <span>({resources.filter(r => r.status === 'published').length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('draft')}
+              aria-pressed={statusTab === 'draft'}
+              title={`Draft (${resources.filter(r => r.status === 'draft').length})`}
+              className={`px-1.5 py-0.5 font-bold text-[11px] transition-all flex items-center gap-1 ${
+                statusTab === 'draft' ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]' : 'text-neutral-700 hover:text-black'
+              }`}
+            >
+              <Sparkles size={11} />
+              <span className="hidden sm:inline">Draft</span>
+              <span>({resources.filter(r => r.status === 'draft').length})</span>
+            </button>
+          </div>
 
-          <select
-            value={selectedLevel}
-            onChange={e => setSelectedLevel(e.target.value)}
-            className="neo-input text-xs py-1"
-          >
-            <option value="all">Tất cả trình độ</option>
-            <option value="B1 Intermediate">B1 Intermediate</option>
-            <option value="B2 Upper-Intermediate">B2 Upper-Intermediate</option>
-            <option value="C1 Advanced">C1 Advanced</option>
-          </select>
+          {/* View Mode Toggle: Grid vs List vs Table (Icons only) */}
+          {!isDrawerMode && (
+            <div className="inline-flex border border-black bg-white p-0.5 shadow-[1px_1px_0px_#000]" data-testid="library-view-mode-toggle">
+              <button
+                type="button"
+                onClick={() => setLibraryViewMode('grid')}
+                aria-label="Grid view"
+                aria-pressed={libraryViewMode === 'grid'}
+                title="Grid"
+                className={`p-1.5 transition-all ${
+                  libraryViewMode === 'grid' ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]' : 'text-neutral-600 hover:text-black'
+                }`}
+              >
+                <LayoutGrid size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setLibraryViewMode('list')}
+                aria-label="List view"
+                aria-pressed={libraryViewMode === 'list'}
+                title="List"
+                className={`p-1.5 transition-all ${
+                  libraryViewMode === 'list' ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]' : 'text-neutral-600 hover:text-black'
+                }`}
+              >
+                <List size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setLibraryViewMode('table')}
+                aria-label="Table view"
+                aria-pressed={libraryViewMode === 'table'}
+                title="Table"
+                className={`p-1.5 transition-all ${
+                  libraryViewMode === 'table' ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]' : 'text-neutral-600 hover:text-black'
+                }`}
+              >
+                <Table size={13} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Resources Cards Grid */}
-      <div className={isDrawerMode ? "space-y-3 max-h-[60vh] overflow-y-auto pr-1" : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"}>
-        {loadingResources ? (
-          <div className="col-span-full p-8 text-center text-xs font-mono text-neutral-500">
-            <span className="w-3 h-3 bg-[#FF3838] border border-black inline-block animate-spin mr-2"></span>
-            Đang tải danh sách bài đọc...
-          </div>
-        ) : filteredResources.length === 0 ? (
-          <div className="col-span-full p-6 text-center text-xs font-mono text-neutral-500 bg-neutral-50 border border-dashed border-black">
-            Không tìm thấy bài đọc nào phù hợp. Bấm "Đồng bộ 5 TED & Steve Jobs" để nạp tài liệu!
-          </div>
-        ) : (
-          filteredResources.map(res => {
+      {/* Resources Display (Grid or Compact List) */}
+      {loadingResources ? (
+        <div className="p-8 text-center text-xs font-mono text-neutral-500 bg-neutral-50 border border-dashed border-black">
+          <span className="w-3 h-3 bg-[#FF3838] border border-black inline-block animate-spin mr-2"></span>
+          Loading reading articles...
+        </div>
+      ) : filteredResources.length === 0 ? (
+        <div className="p-6 text-center text-xs font-mono text-neutral-500 bg-neutral-50 border border-dashed border-black">
+          No matching articles found. Click "Sync Sample Library (26 articles)" to load articles!
+        </div>
+      ) : libraryViewMode === 'table' && !isDrawerMode ? (
+        <div className="border-2 border-black bg-white shadow-[2px_2px_0px_#000] overflow-x-auto" data-testid="library-table-view">
+          <table className="w-full text-left border-collapse text-xs font-mono">
+            <thead>
+              <tr className="bg-[#FFE500] border-b-2 border-black text-[11px] font-black uppercase text-black">
+                <th className="py-2 px-3 whitespace-nowrap">#</th>
+                <th className="py-2 px-3 min-w-[240px]">Article Title</th>
+                <th className="py-2 px-3 whitespace-nowrap">Category</th>
+                <th className="py-2 px-3 whitespace-nowrap">Level</th>
+                <th className="py-2 px-3 whitespace-nowrap text-center">Scale</th>
+                <th className="py-2 px-3 whitespace-nowrap text-center">Chunks</th>
+                <th className="py-2 px-3 whitespace-nowrap text-right pr-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-black/15">
+              {filteredResources.map((res, idx) => {
+                const isPublished = res.status === 'published';
+                const approvedCount = res.annotations.filter(a => a.status === 'approved').length;
+                const totalPhrases = res.annotations.length;
+                const sentenceCount = res.sentences?.length || 0;
+                const paragraphCount = res.paragraphs?.length || 0;
+                const isCurrentActive = activeRoom?.status === 'active' && activeRoom.resourceId === res.id;
+
+                return (
+                  <tr
+                    key={res.id}
+                    className={`transition-colors ${
+                      isCurrentActive
+                        ? 'bg-red-50 hover:bg-red-100/70 font-semibold'
+                        : idx % 2 === 0
+                        ? 'bg-[#FFFDF9] hover:bg-[#FFF8D6]'
+                        : 'bg-white hover:bg-[#FFF8D6]'
+                    }`}
+                  >
+                    {/* Index & Active indicator */}
+                    <td className="py-2 px-3 text-neutral-500 font-bold text-[11px] whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        {isCurrentActive && (
+                          <span className="w-2 h-2 rounded-full bg-[#FF3838] animate-ping" title="Live Now" />
+                        )}
+                        <span>{idx + 1}</span>
+                      </div>
+                    </td>
+
+                    {/* Title & Status */}
+                    <td className="py-2 px-3 font-reading">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className="font-bold text-sm text-black hover:underline cursor-pointer"
+                          onClick={() => setReviewingResource(res)}
+                          title={res.title}
+                        >
+                          {res.title}
+                        </span>
+                        {isCurrentActive && (
+                          <span className="neo-badge bg-[#FF3838] text-white text-[8px] py-0 px-1 font-bold">
+                            LIVE
+                          </span>
+                        )}
+                        {isPublished ? (
+                          <span className="neo-badge bg-[#4ADE80] text-black text-[8px] py-0 px-1">
+                            Published
+                          </span>
+                        ) : (
+                          <span className="neo-badge bg-[#FFE500] text-black text-[8px] py-0 px-1">
+                            Draft
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Category */}
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <span className="bg-neutral-100 px-1.5 py-0.5 border border-black/30 text-[10px] text-neutral-800 font-bold">
+                        {res.category}
+                      </span>
+                    </td>
+
+                    {/* Level */}
+                    <td className="py-2 px-3 whitespace-nowrap text-[11px] text-neutral-700">
+                      {res.level.split(' ')[0]} <span className="text-[10px] text-neutral-500 font-normal">({res.level.replace(res.level.split(' ')[0] + ' ', '')})</span>
+                    </td>
+
+                    {/* Size */}
+                    <td className="py-2 px-3 whitespace-nowrap text-center text-[11px] text-neutral-600">
+                      {sentenceCount} sentences / {paragraphCount} paragraphs
+                    </td>
+
+                    {/* Chunks */}
+                    <td className="py-2 px-3 whitespace-nowrap text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStudioResource(res);
+                          if (activeRoom) {
+                            setShowStudioModal(true);
+                          } else {
+                            setActiveMainTab('studio');
+                          }
+                        }}
+                        className="hover:underline font-bold text-[#111111] inline-flex items-center gap-1 text-[11px]"
+                        title="Open Chunks Studio"
+                      >
+                        <Highlighter size={11} className="text-[#FF3838]" />
+                        <span>{approvedCount}/{totalPhrases}</span>
+                      </button>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="py-2 px-3 whitespace-nowrap text-right pr-4">
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setReviewingResource(res)}
+                          className="p-1 hover:bg-neutral-200 border border-black/60 bg-white"
+                          title="Quick view article & chunks"
+                        >
+                          <Eye size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingResource(res);
+                            setIsEditorOpen(true);
+                          }}
+                          className="p-1 hover:bg-neutral-200 border border-black/60 bg-white"
+                          title="Edit reading article"
+                        >
+                          <Edit size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(res.id)}
+                          className="p-1 hover:bg-red-200 text-red-700 border border-black/60 bg-white"
+                          title="Delete reading article"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                        {isCurrentActive ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenClassroom(res)}
+                            className="px-2 py-0.5 bg-[#4ADE80] text-black text-[10px] font-bold border border-black hover:bg-green-400 ml-1 inline-flex items-center gap-1"
+                            title="Load to currently open room"
+                          >
+                            <RefreshCw size={10} />
+                            <span>Load</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenClassroom(res)}
+                            className="px-2 py-0.5 bg-[#FF3838] text-white text-[10px] font-bold border border-black hover:bg-red-600 ml-1 inline-flex items-center gap-1"
+                            title="Go live now"
+                          >
+                            <Play size={10} />
+                            <span>Live</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : libraryViewMode === 'list' && !isDrawerMode ? (
+        <div className="space-y-2" data-testid="library-compact-list">
+          {filteredResources.map(res => {
+            const isPublished = res.status === 'published';
+            const approvedCount = res.annotations.filter(a => a.status === 'approved').length;
+            const totalPhrases = res.annotations.length;
+            const sentenceCount = res.sentences?.length || 0;
+            const paragraphCount = res.paragraphs?.length || 0;
+            const isCurrentActive = activeRoom?.status === 'active' && activeRoom.resourceId === res.id;
+
+            return (
+              <div
+                key={res.id}
+                className={`p-2.5 border-2 border-black flex flex-col md:flex-row md:items-center justify-between gap-2.5 transition-all shadow-[2px_2px_0px_#000] ${
+                  isCurrentActive ? 'border-[#FF3838] bg-red-50/60 ring-2 ring-[#FF3838]' : 'bg-[#FFFDF0] hover:bg-white'
+                }`}
+              >
+                {/* Left Column: Title & Metadata badges */}
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                    {isCurrentActive && (
+                      <span className="neo-badge bg-[#FF3838] text-white text-[9px] py-0 px-1 font-bold">
+                        LIVE NOW
+                      </span>
+                    )}
+                    {isPublished ? (
+                      <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1">
+                        Published
+                      </span>
+                    ) : (
+                      <span className="neo-badge bg-[#FFE500] text-black text-[9px] py-0 px-1">
+                        Draft
+                      </span>
+                    )}
+                    <span className="bg-white px-1.5 py-0.5 border border-black text-neutral-800 font-bold">
+                      {res.category}
+                    </span>
+                    <span className="bg-neutral-100 px-1.5 py-0.5 border border-black/40 text-neutral-600">
+                      {res.level}
+                    </span>
+                    <span className="text-neutral-500">
+                      {sentenceCount} sentences • {paragraphCount} paragraphs
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-sm text-black truncate font-reading" title={res.title}>
+                    {res.title}
+                  </h4>
+                </div>
+
+                {/* Right Column: Chunk Count & Action Buttons */}
+                <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudioResource(res);
+                      if (activeRoom) {
+                        setShowStudioModal(true);
+                       } else {
+                        setActiveMainTab('studio');
+                       }
+                    }}
+                    className="neo-btn-sm px-2 py-1 bg-white text-neutral-900 font-bold hover:bg-neutral-100 flex items-center gap-1"
+                    title="Studio review & add chunks"
+                  >
+                    <Highlighter size={12} className="text-[#FF3838]" />
+                    <span>{approvedCount}/{totalPhrases} Chunks</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setReviewingResource(res)}
+                    className="neo-btn-sm px-2 py-1 text-[11px] font-bold bg-white text-black hover:bg-neutral-100"
+                    title="View phrase list"
+                  >
+                    <Eye size={12} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingResource(res);
+                      setIsEditorOpen(true);
+                    }}
+                    className="neo-btn-sm px-1.5 py-1 hover:bg-neutral-200 text-black border border-black bg-white"
+                    title="Edit article"
+                  >
+                    <Edit size={12} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(res.id)}
+                    className="neo-btn-sm px-1.5 py-1 hover:bg-red-200 text-red-700 border border-black bg-white"
+                    title="Delete article"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+
+                  {isCurrentActive ? (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenClassroom(res)}
+                      className="neo-btn-sm px-2.5 py-1 bg-[#4ADE80] text-black text-[11px] font-bold hover:bg-green-400 flex items-center gap-1"
+                      title="Load this article to active classroom"
+                    >
+                      <RefreshCw size={11} />
+                      <span>Load to Room</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenClassroom(res)}
+                      className="neo-btn-sm px-2.5 py-1 bg-[#FF3838] text-white text-[11px] font-bold hover:bg-red-600 flex items-center gap-1"
+                      title="Go live with this article now"
+                    >
+                      <Play size={11} />
+                      <span>Live</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className={isDrawerMode ? "space-y-3 max-h-[60vh] overflow-y-auto pr-1" : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"}>
+          {filteredResources.map(res => {
             const isPublished = res.status === 'published';
             const approvedCount = res.annotations.filter(a => a.status === 'approved').length;
             const totalPhrases = res.annotations.length;
@@ -967,7 +1345,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       <div className="flex flex-wrap items-center gap-1 mb-1">
                         {activeRoom && activeRoom.status === 'active' && activeRoom.resourceId === res.id && (
                           <span className="neo-badge bg-[#FF3838] text-white text-[9px] py-0 px-1 font-bold">
-                            ĐANG DẠY
+                            LIVE NOW
                           </span>
                         )}
                         {isPublished ? (
@@ -983,7 +1361,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                           {res.level}
                         </span>
                         <span className="text-[10px] font-mono text-neutral-500 bg-neutral-100 px-1 border border-black truncate max-w-[120px]">
-                          {sentenceCount} câu • {paragraphCount} đoạn
+                          {sentenceCount} sentences • {paragraphCount} paragraphs
                         </span>
                       </div>
                       <h4 className="font-bold text-sm text-black truncate font-reading" title={res.title}>
@@ -999,7 +1377,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                           setIsEditorOpen(true);
                         }}
                         className="p-1 hover:bg-neutral-200 text-black border border-black"
-                        title="Chỉnh sửa bài"
+                        title="Edit article"
                       >
                         <Edit size={11} />
                       </button>
@@ -1007,7 +1385,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                         type="button"
                         onClick={() => handleDelete(res.id)}
                         className="p-1 hover:bg-red-200 text-red-700 border border-black"
-                        title="Xóa bài"
+                        title="Delete article"
                       >
                         <Trash2 size={11} />
                       </button>
@@ -1031,7 +1409,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       }
                     }}
                     className="font-bold text-neutral-800 hover:text-[#FF3838] flex items-center gap-1"
-                    title="Mở Studio duyệt & thêm cụm từ"
+                    title="Open Studio to review & add chunks"
                   >
                     <Highlighter size={11} />
                     <span>{approvedCount}/{totalPhrases} Chunks</span>
@@ -1044,9 +1422,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                         setReviewingResource(res);
                       }}
                       className="neo-btn-sm px-1.5 py-0.5 text-[10px] font-bold bg-white text-black hover:bg-neutral-100"
-                      title="Xem danh sách cụm từ"
+                      title="View phrase list"
                     >
-                      <Eye size={10} className="mr-0.5" /> Xem
+                      <Eye size={10} className="mr-0.5" /> View
                     </button>
 
                     {activeRoom && activeRoom.status === 'active' ? (
@@ -1054,17 +1432,17 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                         type="button"
                         onClick={() => handleOpenClassroom(res)}
                         className="neo-btn-sm px-2 py-0.5 bg-[#4ADE80] text-black text-[10px] font-bold hover:bg-green-400"
-                        title="Nạp bài này vào phòng học đang mở"
+                        title="Load this article to active classroom"
                       >
                         <RefreshCw size={10} className="mr-0.5 inline" />
-                        <span>🔄 Nạp vào phòng</span>
+                        <span>Load to Room</span>
                       </button>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleOpenClassroom(res)}
                         className="neo-btn-sm px-2 py-0.5 bg-[#FF3838] text-white text-[10px] font-bold hover:bg-red-600"
-                        title="Mở phòng live với bài này ngay"
+                        title="Go live with this article now"
                       >
                         <Play size={10} className="mr-0.5" /> Live
                       </button>
@@ -1073,9 +1451,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 
@@ -1116,7 +1494,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             }`}
           >
             <Radio size={14} className={activeRoom && activeRoom.status === 'active' ? 'animate-pulse text-white' : ''} />
-            <span>🔴 Lớp học Trực tiếp (Live)</span>
+            <span>🔴 Live Classroom</span>
             {activeRoom && activeRoom.status === 'active' && (
               <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-mono font-bold ml-0.5">
                 {activeRoom.id}
@@ -1134,7 +1512,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             }`}
           >
             <Layers size={14} />
-            <span>📚 Thư viện ({resources.length})</span>
+            <span>📚 Library ({resources.length})</span>
           </button>
 
           <button
@@ -1147,7 +1525,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             }`}
           >
             <Highlighter size={14} />
-            <span>✨ Studio Cụm từ</span>
+            <span>✨ Chunks Studio</span>
           </button>
         </div>
 
@@ -1158,19 +1536,19 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               type="button"
               onClick={handleCopyLink}
               className="neo-btn-sm px-2.5 py-1 bg-white text-black text-xs font-bold"
-              title="Sao chép link học sinh"
+              title="Copy student link"
             >
               {copiedLink ? <Check size={12} className="mr-1 text-green-600" /> : <Copy size={12} />}
-              <span>{copiedLink ? 'Đã chép link!' : 'Copy Link'}</span>
+              <span>{copiedLink ? 'Copied Link!' : 'Copy Link'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => onOpenLearnerView(activeRoom.id)}
               className="neo-btn-sm px-2 py-1 bg-[#00D2FF] text-black text-xs font-bold"
-              title="Xem giao diện học sinh toàn màn hình"
+              title="View student interface fullscreen"
             >
-              <ExternalLink size={12} className="mr-1" /> Màn hình HS
+              <ExternalLink size={12} className="mr-1" /> Student Screen
             </button>
 
             <button
@@ -1178,7 +1556,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               onClick={handleEndRoom}
               className="neo-btn-sm px-2.5 py-1 bg-[#FF3838] text-white text-xs font-bold hover:bg-red-600"
             >
-              Kết thúc
+              End
             </button>
           </div>
         )}
@@ -1191,22 +1569,22 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             {/* Left / Center Column: lg:col-span-8 (~70% width) */}
             <div className="lg:col-span-8 space-y-4">
-              {/* GỘP CHUNG MỘT KHỐI THỐNG NHẤT: Nội dung câu + Điều hướng + Trình chiếu Slide Remote */}
+              {/* UNIFIED CONTAINER: Unit content + Navigation + Remote Presentation Controls */}
               <div ref={readingAreaRef} data-testid="teacher-reading-area" className={`neo-box bg-white p-4 sm:p-5 space-y-4 ${isReadingFullscreen ? 'h-screen w-screen overflow-y-auto lg:pr-[44%] flex flex-col' : ''}`}>
                 <div className="flex justify-between items-center gap-2">
-                  <span className="text-xs font-mono">Vùng đọc & điều hướng</span>
-                  <button type="button" onClick={toggleReadingFullscreen} aria-label={isReadingFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình vùng đọc'} title={isReadingFullscreen ? 'Thoát toàn màn hình (Esc)' : 'Toàn màn hình vùng đọc và learner'} className="neo-btn-sm px-2 py-1 bg-white text-black flex items-center gap-1">
+                  <span className="text-xs font-mono">Reading & Controls</span>
+                  <button type="button" onClick={toggleReadingFullscreen} aria-label={isReadingFullscreen ? 'Exit fullscreen' : 'Fullscreen reading area'} title={isReadingFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen reading area and learner view'} className="neo-btn-sm px-2 py-1 bg-white text-black flex items-center gap-1">
                     {isReadingFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
                   </button>
                 </div>
-                {/* Header: Số thứ tự câu + Thanh tiến độ mini + Sĩ số + Mã phòng + Trạng thái phát */}
+                {/* Header: Unit index + Mini progress bar + Headcount + Room code + Playback status */}
                 <div className="space-y-2 pb-3 border-b border-black">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="neo-badge bg-[#FFE500] text-black text-xs font-mono font-bold">
                         {isFullReviewActive
-                          ? 'Review Toàn bài'
-                          : `${stagedGranularity === 'paragraph' ? 'Đoạn' : 'Câu'} ${stagedUnitIndex + 1} / ${currentUnitsList.length}`}
+                          ? 'Full Article Review'
+                          : `${stagedGranularity === 'paragraph' ? 'Paragraph' : 'Sentence'} ${stagedUnitIndex + 1} / ${currentUnitsList.length}`}
                       </span>
                       <span className="font-mono text-xs font-bold text-neutral-800 truncate max-w-[200px] sm:max-w-xs">
                         {activePresentedResource.title}
@@ -1214,23 +1592,23 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {/* Sĩ số online */}
+                      {/* Online count */}
                       <span className="neo-badge bg-[#4ADE80] text-black text-[10px] py-0.5 px-1.5 font-bold flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-700 animate-pulse inline-block"></span>
                         👥 {participants.length}
                       </span>
 
-                      {/* Mã phòng */}
+                      {/* Room code */}
                       <span className="neo-badge bg-white text-black text-[10px] py-0.5 px-1.5 font-mono font-bold">
                         🏷️ {activeRoom.id}
                       </span>
 
-                      {/* Trạng thái phát */}
+                      {/* Playback status */}
                       {(() => {
                         if (isFullReviewActive) {
                           return (
                             <span className="neo-badge bg-[#00D2FF] text-black text-[10px] py-0.5 px-1.5 font-bold">
-                              📖 REVIEW TOÀN BÀI
+                              📖 FULL PASSAGE REVIEW
                             </span>
                           );
                         }
@@ -1238,34 +1616,34 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                         if (status === 'playing') {
                           return (
                             <span className="neo-badge bg-[#4ADE80] text-black text-[10px] py-0.5 px-1.5 font-bold animate-pulse">
-                              ● ĐANG PHÁT
+                              ● PLAYING
                             </span>
                           );
                         }
                         if (status === 'paused') {
                           return (
                             <span className="neo-badge bg-[#FFE500] text-black text-[10px] py-0.5 px-1.5 font-bold">
-                              ❚❚ TẠM DỪNG
+                              ❚❚ PAUSED
                             </span>
                           );
                         }
                         if (status === 'manual_show') {
                           return (
                             <span className="neo-badge bg-[#00D2FF] text-black text-[10px] py-0.5 px-1.5 font-bold">
-                              💬 THẢO LUẬN
+                              💬 DISCUSSION
                             </span>
                           );
                         }
                         return (
                           <span className="neo-badge bg-neutral-200 text-neutral-700 text-[10px] py-0.5 px-1.5 font-bold">
-                            ○ CHỜ PHÁT
+                            ○ WAITING
                           </span>
                         );
                       })()}
                     </div>
                   </div>
 
-                  {/* Thanh tiến độ câu bài đọc mini */}
+                  {/* Reading unit mini progress bar */}
                   {!isFullReviewActive && (
                     <div className="w-full h-1.5 bg-neutral-200 border border-black overflow-hidden">
                       <div
@@ -1278,10 +1656,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   )}
                 </div>
 
-                {/* Chế độ trình chiếu: Câu (Sentence) | Đoạn (Paragraph) | Toàn bài (Full Review) (Requirement 5 & 6) */}
+                {/* Presentation mode: Sentence | Paragraph | Full Review (Requirement 5 & 6) */}
                 <div className="flex flex-wrap items-center justify-between gap-2 py-1 text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-mono font-bold uppercase text-neutral-700">Đơn vị đọc:</span>
+                    <span className="text-[11px] font-mono font-bold uppercase text-neutral-700">Reading Unit:</span>
                     <div className="inline-flex border border-black bg-white shadow-[1px_1px_0px_#000]">
                       <button
                         type="button"
@@ -1291,9 +1669,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                             ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]'
                             : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
                         }`}
-                        title="Trình chiếu theo từng câu ngắn"
+                        title="Display sentence by sentence"
                       >
-                        📝 Câu (Sentence)
+                        📝 Sentence
                       </button>
                       <button
                         type="button"
@@ -1303,67 +1681,66 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                             ? 'bg-[#FFE500] text-black shadow-[1px_1px_0px_#000]'
                             : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
                         }`}
-                        title="Trình chiếu theo từng đoạn văn dài"
+                        title="Display paragraph by paragraph"
                       >
-                        📄 Đoạn (Paragraph)
+                        📄 Paragraph
                       </button>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1.5">
                     <button type="button" onClick={() => setShowFullArticlePreview(value => !value)}
-                      aria-label="Preview toàn bài riêng teacher" aria-pressed={showFullArticlePreview}
-                      title="Preview toàn bài — chỉ teacher, không thay đổi learner"
+                      aria-label="Teacher private full preview" aria-pressed={showFullArticlePreview}
+                      title="Full preview — teacher only, does not affect student screen"
                       className="neo-btn-sm px-2 py-1 bg-white text-black"><BookOpen size={16} /></button>
                     {showFullArticlePreview && <button type="button" onClick={handleToggleFullReview}
-                      aria-label={isFullReviewActive && roomProgress.phase === 'manual_show' ? 'Ngừng chiếu toàn bài' : 'Chiếu toàn bài cho học viên'}
-                      title="Bật / tắt chiếu toàn bài cho learner" className="neo-btn-sm px-2 py-1 bg-[#FFE500] text-black"><Radio size={16} /></button>}
-                    {isFullReviewActive && <button type="button" onClick={handleExitFullReview} aria-label="Thoát review learner" title="Thoát review learner"
+                      aria-label={isFullReviewActive && roomProgress.phase === 'manual_show' ? 'Stop broadcasting full article' : 'Broadcast full article to students'}
+                      title="Toggle broadcasting full article to students" className="neo-btn-sm px-2 py-1 bg-[#FFE500] text-black"><Radio size={16} /></button>}
+                    {isFullReviewActive && <button type="button" onClick={handleExitFullReview} aria-label="Exit student review" title="Exit student review"
                       className="neo-btn-sm px-2 py-1 bg-white text-black"><X size={16} /></button>}
                   </div>
                 </div>
 
                 <div data-testid="reading-highlight-toggle" className="flex flex-wrap items-center gap-2 text-xs font-mono">
                   <label className={`inline-flex cursor-pointer items-center gap-2 rounded-full border-2 border-black px-3 py-1.5 font-bold shadow-[2px_2px_0px_#000] ${stagedHighlight ? 'bg-[#FFE500]' : 'bg-white'}`}>
-                    <Highlighter size={16} /><span>Highlights</span><input type="checkbox" aria-label="Hiển thị Highlights" checked={stagedHighlight}
+                    <Highlighter size={16} /><span>Highlights</span><input type="checkbox" aria-label="Show Highlights" checked={stagedHighlight}
                     onChange={e => setStagedHighlight(e.target.checked)} className="accent-black" />
                   </label>
-                  <span className="rounded-full border border-black/20 bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600">{stagedHighlight !== activeRoom.highlightEnabled ? 'Chưa áp dụng · cần Apply' : 'Đã áp dụng'}</span>
+                  <span className="rounded-full border border-black/20 bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600">{stagedHighlight !== activeRoom.highlightEnabled ? 'Not applied · click Apply' : 'Applied'}</span>
                 </div>
-                {clockStatus.failed && <p role="status" className="text-xs text-red-700">Chưa đồng bộ được giờ server. Kiểm tra kết nối rồi thử Replay.</p>}
-                <TeacherPrivateUnitPreview room={activeRoom} resource={activePresentedResource} currentIndex={isFullReviewActive ? reviewReturnIndex.current : undefined} />
+                {clockStatus.failed && <p role="status" className="text-xs text-red-700">Server time sync failed. Check connection and try Replay.</p>}
 
-                {/* Nội dung câu / đoạn / toàn bài hiện tại (Reading Text Display: Chữ to, rõ ràng) */}
+                {/* Current sentence / paragraph / full passage content (Reading Text Display: Clear, prominent typography) */}
                 <div data-testid="teacher-reading-canvas" className={`p-4 sm:p-6 bg-paper-reading border-2 border-black flex flex-col items-center justify-center text-center shadow-[2px_2px_0px_#000] relative ${isReadingFullscreen ? 'flex-1 min-h-[50vh]' : 'min-h-[140px]'}`}>
                   {showFullArticlePreview ? (
                     <div data-testid="private-full-article-preview" className="w-full text-left space-y-2 max-h-[340px] overflow-y-auto">
-                      <p className="text-xs font-mono text-neutral-500">Preview riêng teacher · chỉ chiếu khi bấm icon phát sóng.</p>
+                      <p className="text-xs font-mono text-neutral-500">Teacher private preview · broadcast to students with live icon.</p>
                       <ReadingUnitText room={{ ...activeRoom, highlightEnabled: stagedHighlight }} timeline={{ ...roomProgress, phase: 'manual_show' }}
                         fullReview text={activePresentedResource.canonicalText} annotations={fullReviewApprovedSpans}
                         className="font-reading text-lg sm:text-xl leading-relaxed" />
                     </div>
                   ) : !isFullReviewActive && stagedGranularity !== activeRoom.granularity && stagedText ? (
                     <div data-testid="private-staged-unit-preview" className="w-full space-y-2">
-                      <p className="text-xs font-mono text-neutral-500">Preview riêng teacher · {stagedGranularity === 'sentence' ? 'Câu' : 'Đoạn'} · cần Apply hoặc Hiện để chuyển learner.</p>
+                      <p className="text-xs font-mono text-neutral-500">Teacher private preview · {stagedGranularity === 'sentence' ? 'Sentence' : 'Paragraph'} · requires Apply or Show to display on student screen.</p>
                       <ReadingUnitText room={{...activeRoom,highlightEnabled:stagedHighlight}} timeline={{...roomProgress,phase:'manual_show'}} text={stagedText} annotations={stagedApprovedSpans} className="font-reading text-xl sm:text-2xl md:text-3xl leading-relaxed" />
                     </div>
                   ) : unitReviewMode && roomProgress.phase === 'idle' ? (
-                    <p data-testid="teacher-reading-hidden" className="text-xs font-mono text-neutral-500">Đang ẩn trên teacher và learner.</p>
+                    <p data-testid="teacher-reading-hidden" className="text-xs font-mono text-neutral-500">Hidden on teacher and student screens.</p>
                   ) : ['hold', 'erase', 'paused', 'manual_show'].includes(roomProgress.phase) && activeRoom.currentUnit && !isFullReviewActive ? (
                     <div className="w-full space-y-3">
                       <ReadingCountdown timeline={roomProgress} />
                       <ReadingUnitText room={activeRoom} timeline={roomProgress} className="font-reading text-xl sm:text-2xl md:text-3xl leading-relaxed" />
-                      <p className="text-[10px] font-mono text-neutral-500">{roomProgress.phase === 'manual_show' ? 'Review câu/đoạn · không đếm giờ · cùng nội dung learner.' : 'Trạng thái learner đã Apply.'}</p>
+                      <p className="text-[10px] font-mono text-neutral-500">{roomProgress.phase === 'manual_show' ? 'Unit review · untimed · matches student screen.' : 'Applied student state.'}</p>
                     </div>
                   ) : isFullReviewActive ? (
                     /* Full Text Review Mode Display */
                     <div className="w-full text-left space-y-3 py-2 max-h-[340px] overflow-y-auto pr-1 select-text">
                       <div className="bg-[#FFE500] border border-black p-2 text-xs font-mono font-bold flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <BookOpen size={14} /> Toàn bộ bài đọc (Chế độ Ôn tập & Thảo luận)
+                          <BookOpen size={14} /> Full Reading Passage (Review & Discussion Mode)
                         </span>
                         <span className="bg-white px-1.5 py-0.5 border border-black text-[10px] uppercase">
-                          Không giới hạn thời gian
+                          Untimed
                         </span>
                       </div>
                       <ReadingUnitText room={activeRoom} timeline={roomProgress} className="font-reading text-lg sm:text-xl leading-relaxed text-[#111111]" />
@@ -1390,63 +1767,65 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       <div className="mt-3 pt-2 border-t border-black/10 w-full flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono text-neutral-600">
                         <div className="flex items-center gap-1.5">
                           <Clock size={12} className="text-black" />
-                          <span>Thời gian giữ chữ: <b>{(dynamicHoldInfo.holdDurationMs / 1000).toFixed(1)}s</b></span>
+                          <span>Hold duration: <b>{(dynamicHoldInfo.holdDurationMs / 1000).toFixed(1)}s</b></span>
                           {dynamicPacingEnabled && (
                             <span className="bg-[#FFFDF0] px-1 border border-black text-[10px] text-black font-bold">
-                              ⚡ {dynamicHoldInfo.wordCount} từ {dynamicHoldInfo.isAdjusted ? `(${dynamicHoldInfo.adjustedDiffMs > 0 ? '+' : ''}${(dynamicHoldInfo.adjustedDiffMs / 1000).toFixed(1)}s tự điều chỉnh)` : '(chuẩn)'}
+                              ⚡ {dynamicHoldInfo.wordCount} words {dynamicHoldInfo.isAdjusted ? `(${dynamicHoldInfo.adjustedDiffMs > 0 ? '+' : ''}${(dynamicHoldInfo.adjustedDiffMs / 1000).toFixed(1)}s adjusted)` : '(standard)'}
                             </span>
                           )}
                         </div>
                         {autoMergeShortUnits && (
                           <span className="text-[10px] text-neutral-500">
-                            (Đã bật gộp câu ngắn &lt; {minWordsPerUnit} từ)
+                            (Auto-merge short sentences &lt; {minWordsPerUnit} words enabled)
                           </span>
                         )}
                       </div>
                     </>
                   ) : (
                     <span className="text-neutral-400 font-mono text-sm italic">
-                      Không có nội dung câu
+                      No sentence content
                     </span>
                   )}
                 </div>
+                <TeacherPrivateUnitPreview room={activeRoom} resource={activePresentedResource} currentIndex={isFullReviewActive ? reviewReturnIndex.current : undefined} />
 
-                <nav aria-label="Điều khiển đọc bằng bàn phím" className="space-y-2">
+                <nav aria-label="Keyboard reading controls" className="space-y-2">
                   <div className="text-center text-xs font-mono">
-                    <span>{isFullReviewActive ? 'Learner: toàn bài' : `${activeRoom.granularity === 'paragraph' ? 'Đoạn' : 'Câu'} ${(activeRoom.currentUnit?.index ?? 0) + 1} / ${activeRoom.currentUnit?.totalUnits ?? 0}`}</span>
+                    <span>{isFullReviewActive ? 'Learner: full text' : `${activeRoom.granularity === 'paragraph' ? 'Paragraph' : 'Sentence'} ${(activeRoom.currentUnit?.index ?? 0) + 1} / ${activeRoom.currentUnit?.totalUnits ?? 0}`}</span>
                   </div>
                   <div className="flex flex-wrap justify-center gap-2">
                     <button type="button" onClick={handlePreviousAndPlay} disabled={(activeRoom.currentUnit?.index ?? 0) <= 0 || isFullReviewActive}
-                      aria-label={activeRoom.granularity === 'paragraph' ? 'Đoạn trước' : 'Câu trước'} title={unitReviewMode ? 'Review đơn vị trước, không đếm giờ (←)' : 'Đơn vị trước và phát ngay (← / PageUp)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><ChevronLeft size={18} /></button>
+                      aria-label={activeRoom.granularity === 'paragraph' ? 'Previous paragraph' : 'Previous sentence'} title={unitReviewMode ? 'Review previous unit, untimed (←)' : 'Previous unit and play immediately (← / PageUp)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><ChevronLeft size={18} /></button>
                     <button type="button" onClick={handleReplayCurrent} disabled={isFullReviewActive}
-                      aria-label={activeRoom.granularity === 'paragraph' ? 'Phát lại đoạn này' : 'Phát lại câu này'} title={unitReviewMode ? 'Hiện lại đơn vị này, không đếm giờ (R)' : 'Phát lại (R)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><RotateCcw size={18} /></button>
+                      aria-label={activeRoom.granularity === 'paragraph' ? 'Replay this paragraph' : 'Replay this sentence'} title={unitReviewMode ? 'Show this unit again, untimed (R)' : 'Replay (R)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><RotateCcw size={18} /></button>
                     {!isFullReviewActive && ['playing','paused'].includes(activeRoom.playbackStatus) && roomProgress.phase !== 'blank_finished' && <button type="button"
                       onClick={activeRoom.playbackStatus === 'paused' ? handleResumeTurn : handlePauseTurn}
-                      aria-label={activeRoom.playbackStatus === 'paused' ? 'Tiếp tục đọc' : 'Tạm dừng đọc'} title={activeRoom.playbackStatus === 'paused' ? 'Tiếp tục đọc (Space)' : 'Tạm dừng đọc (Space)'}
+                      aria-label={activeRoom.playbackStatus === 'paused' ? 'Resume reading' : 'Pause reading'} title={activeRoom.playbackStatus === 'paused' ? 'Resume reading (Space)' : 'Pause reading (Space)'}
                       className="neo-btn-sm p-2 bg-[#FFE500]">{activeRoom.playbackStatus === 'paused' ? <Play size={18} /> : <Pause size={18} />}</button>}
                     <button type="button" onClick={handleAdvanceAndPlay} disabled={(activeRoom.currentUnit?.index ?? 0) >= (activeRoom.currentUnit?.totalUnits ?? 0) - 1 || isFullReviewActive}
-                      aria-label={activeRoom.granularity === 'paragraph' ? 'Đoạn tiếp' : 'Câu tiếp'} title={unitReviewMode ? 'Review đơn vị tiếp, không đếm giờ (→)' : 'Đơn vị tiếp và phát ngay (→ / PageDown)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><ChevronRight size={18} /></button>
+                      aria-label={activeRoom.granularity === 'paragraph' ? 'Next paragraph' : 'Next sentence'} title={unitReviewMode ? 'Review next unit, untimed (→)' : 'Next unit and play immediately (→ / PageDown)'} className="neo-btn-sm p-2 bg-white disabled:opacity-40"><ChevronRight size={18} /></button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-neutral-500">
-                    <label className="flex items-center gap-1.5"><input type="checkbox" checked={autoAdvance} onChange={e => setAutoAdvance(e.target.checked)} />Tự chuyển câu</label>
-                    <span>{unitReviewMode ? '← Trước · R Hiện lại · → Tiếp · Space/B Ẩn/hiện · không đếm giờ' : '← Trước · R Phát lại · Space Phát/dừng · → Tiếp · B Ẩn/hiện'}</span>
+                    <label className="flex items-center gap-1.5"><input type="checkbox" checked={autoAdvance} onChange={e => setAutoAdvance(e.target.checked)} />Auto-advance</label>
+                    <span>{unitReviewMode ? '← Prev · R Replay · → Next · Space/B Hide/Show · untimed' : '← Prev · R Replay · Space Play/Pause · → Next · B Hide/Show'}</span>
                   </div>
                 </nav>
 
                 <div className="flex items-center justify-between text-xs font-mono">
                     <button type="button" onClick={handleToggleBlankOrShow}
-                      aria-label={['idle', 'blank_finished'].includes(roomProgress.phase) ? 'Hiện màn hình learner' : 'Ẩn màn hình learner'} title="Ẩn / hiện review trên teacher và learner, không đếm giờ (B / .)"
+                      aria-label={['idle', 'blank_finished'].includes(roomProgress.phase) ? 'Show student screen' : 'Hide student screen'} title="Hide / show review on teacher and learner, untimed (B / .)"
                       className="neo-btn-sm p-2 bg-white">{['idle', 'blank_finished'].includes(roomProgress.phase) ? <Eye size={18} /> : <EyeOff size={18} />}</button>
                   {unitReviewMode && !showFullArticlePreview && <button type="button" onClick={() => { unitReviewModeRef.current = false; setUnitReviewMode(false); }}
-                    aria-label="Trở lại đọc có thời gian" title="Trở lại đọc có thời gian — bấm Replay để bắt đầu" className="neo-btn-sm p-2 bg-white"><Clock size={16} /></button>}
-                  <button type="button" onClick={() => setShowLiveLearnerView(value => !value)} aria-label="Góc nhìn learner"
-                    title="Góc nhìn learner" className="neo-btn-sm px-2 py-1 bg-white"><Monitor size={16} /></button>
+                    aria-label="Return to timed reading" title="Return to timed reading — press Replay to start" className="neo-btn-sm p-2 bg-white"><Clock size={16} /></button>}
+                  <button type="button" onClick={() => setShowLiveLearnerView(value => !value)} aria-label="Learner perspective"
+                    title="Learner perspective" className="neo-btn-sm px-2 py-1 bg-white"><Monitor size={16} /></button>
                 </div>
                 {isReadingFullscreen ? <div data-testid="fullscreen-learner-view" className="lg:fixed lg:right-5 lg:top-5 lg:w-[40vw] lg:max-h-[calc(100vh-2.5rem)] lg:overflow-y-auto">
                   <LiveLearnerPreview room={activeRoom} timeline={roomProgress} participantsCount={participants.length} />
                 </div> : showLiveLearnerView && <LiveLearnerView room={activeRoom} participants={participants}
                   onClose={() => setShowLiveLearnerView(false)} stagedEraseEffect={stagedEraseEffect} stagedDustAngle={stagedDustAngle}
-                  onSelectDustAngle={setStagedDustAngle} onSelectEraseEffect={setStagedEraseEffect} stagedHoldMs={stagedHoldMs} stagedEraseMs={stagedEraseMs} />}
+                  onSelectDustAngle={setStagedDustAngle} onSelectEraseEffect={setStagedEraseEffect} stagedHoldMs={stagedHoldMs} stagedEraseMs={stagedEraseMs}
+                  stagedEraseSchedule={stagedEraseSchedule} onSelectEraseSchedule={setStagedEraseSchedule} />}
               </div>
 
             </div>
@@ -1459,45 +1838,48 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   <button
                     type="button"
                     onClick={() => setSettingsTab('timings')}
-                    className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                    aria-label="Settings"
+                    aria-pressed={settingsTab === 'timings'}
+                    className={`py-2 px-1 text-xs font-mono font-bold flex items-center justify-center border transition-all ${
                       settingsTab === 'timings'
                         ? 'bg-[#FFE500] text-black border-black shadow-[1px_1px_0px_#000]'
                         : 'bg-white text-neutral-600 border-transparent hover:border-black/30 hover:text-black'
                     }`}
-                    title="Cài đặt trình chiếu & Thời gian (Sentence vs Paragraph)"
+                    title="Presentation & Timing Settings (Sentence vs Paragraph)"
                   >
-                    <Sliders size={14} className="shrink-0" />
-                    <span className="hidden sm:inline">Cài đặt</span>
+                    <Sliders size={16} />
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setSettingsTab('switch_lesson')}
-                    className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                    aria-label="Switch Lesson"
+                    aria-pressed={settingsTab === 'switch_lesson'}
+                    className={`py-2 px-1 text-xs font-mono font-bold flex items-center justify-center border transition-all ${
                       settingsTab === 'switch_lesson'
                         ? 'bg-[#4ADE80] text-black border-black shadow-[1px_1px_0px_#000]'
                         : 'bg-white text-neutral-600 border-transparent hover:border-black/30 hover:text-black'
                     }`}
-                    title="Đổi bài học nhanh từ thư viện"
+                    title="Quick switch lesson from library"
                   >
-                    <BookOpen size={14} className="shrink-0" />
-                    <span className="hidden sm:inline">Đổi bài</span>
+                    <BookOpen size={16} />
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setSettingsTab('participants')}
-                    className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border transition-all relative ${
+                    aria-label="Participants"
+                    aria-pressed={settingsTab === 'participants'}
+                    className={`py-2 px-1 text-xs font-mono font-bold flex items-center justify-center border transition-all relative ${
                       settingsTab === 'participants'
                         ? 'bg-[#00D2FF] text-black border-black shadow-[1px_1px_0px_#000]'
                         : 'bg-white text-neutral-600 border-transparent hover:border-black/30 hover:text-black'
                     }`}
-                    title="Học sinh & Mã phòng"
+                    title={`Students & Room Code (${participants.length} connected)`}
                   >
-                    <Users size={14} className="shrink-0" />
-                    <span className="hidden sm:inline">Học sinh</span>
+                    <Users size={16} />
                     {participants.length > 0 && (
-                      <span className="neo-badge bg-[#FF3838] text-white text-[9px] py-0 px-1 font-bold absolute -top-1 -right-1">
+                      <span className="neo-badge bg-[#FF3838] text-white text-[8px] py-0 px-1 font-bold absolute -top-1 -right-1">
                         {participants.length}
                       </span>
                     )}
@@ -1506,41 +1888,42 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   <button
                     type="button"
                     onClick={() => setSettingsTab('all')}
-                    className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                    aria-label="View All Panels"
+                    aria-pressed={settingsTab === 'all'}
+                    className={`py-2 px-1 text-xs font-mono font-bold flex items-center justify-center border transition-all ${
                       settingsTab === 'all'
                         ? 'bg-black text-white border-black shadow-[1px_1px_0px_#000]'
                         : 'bg-white text-neutral-600 border-transparent hover:border-black/30 hover:text-black'
                     }`}
-                    title="Xem tất cả thẻ dọc"
+                    title="View all cards"
                   >
-                    <LayoutGrid size={14} className="shrink-0" />
-                    <span className="hidden sm:inline">Tất cả</span>
+                    <LayoutGrid size={16} />
                   </button>
                 </div>
               </div>
 
-              {/* Card 1: Cài đặt trình chiếu (Timings & Advanced Engine - Requirements 4, 6, 7) */}
+              {/* Card 1: Presentation settings (Timings & Advanced Engine - Requirements 4, 6, 7) */}
               {(settingsTab === 'timings' || settingsTab === 'all') && (
                 <div data-testid="presentation-settings" className="neo-box-sm bg-white p-3.5 space-y-3">
                   <div className="flex items-center justify-between border-b border-black pb-2">
                     <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
                       <Sliders size={14} className="text-black" />
-                      <span>Cài đặt trình chiếu</span>
+                      <span>Presentation Settings</span>
                     </div>
                     <button
                       type="button"
                       onClick={handleApplyToRoom}
                       disabled={isApplying}
                       className="neo-btn-sm px-2.5 py-0.5 bg-[#FFE500] text-black text-[10px] font-bold"
-                      title="Lưu cài đặt và đồng bộ với học sinh"
+                      title="Save settings and synchronize with students"
                     >
-                      {isApplying ? 'Lưu...' : 'Lưu cài đặt'}
+                      {isApplying ? 'Saving...' : 'Save Settings'}
                     </button>
                   </div>
 
-                  {/* Chế độ hiện tại: Câu vs Đoạn */}
+                  {/* Current Mode: Sentence vs Paragraph */}
                   <div className="flex items-center justify-between p-2 bg-[#FFFDF0] border border-black text-xs font-mono">
-                    <span className="font-bold text-black uppercase text-[11px]">Đang chiếu:</span>
+                    <span className="font-bold text-black uppercase text-[11px]">Currently Showing:</span>
                     <div className="flex gap-1">
                       <button
                         type="button"
@@ -1549,7 +1932,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                           stagedGranularity === 'sentence' ? 'bg-[#FFE500] shadow-[1px_1px_0px_#000]' : 'bg-white hover:bg-neutral-100'
                         }`}
                       >
-                        📝 Câu
+                        📝 Sentence
                       </button>
                       <button
                         type="button"
@@ -1558,13 +1941,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                           stagedGranularity === 'paragraph' ? 'bg-[#FFE500] shadow-[1px_1px_0px_#000]' : 'bg-white hover:bg-neutral-100'
                         }`}
                       >
-                        📄 Đoạn
+                        📄 Paragraph
                       </button>
                     </div>
                   </div>
 
                   <details open className="text-xs font-mono space-y-2">
-                    <summary className="cursor-pointer font-bold">Thời gian & âm thanh</summary>
+                    <summary className="cursor-pointer font-bold">Timing & Sounds</summary>
                     <TeacherReadingSettings mode={stagedTimingMode} onMode={setStagedTimingMode}
                       rate={stagedWordsPerSecond} onRate={setStagedWordsPerSecond}
                       schedule={stagedEraseSchedule} onSchedule={setStagedEraseSchedule} text={stagedText}
@@ -1577,15 +1960,15 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       onSelectSound={teacherAudio.selectSound} onPreviewSound={teacherAudio.previewSound} />
                   </details>
                   <label className="flex items-center gap-2 text-xs font-mono"><input type="checkbox" checked={autoMergeShortUnits}
-                    onChange={e => setAutoMergeShortUnits(e.target.checked)} />Gộp câu ngắn</label>
-                  {autoMergeShortUnits && <label className="flex items-center justify-between gap-2 text-xs font-mono">Tối thiểu số từ
+                    onChange={e => setAutoMergeShortUnits(e.target.checked)} />Merge short units</label>
+                  {autoMergeShortUnits && <label className="flex items-center justify-between gap-2 text-xs font-mono">Min word count
                     <input type="number" min={3} max={8} value={minWordsPerUnit} onChange={e => setMinWordsPerUnit(Number(e.target.value))}
                       className="neo-input w-16 text-xs" /></label>}
 
-                  {/* Hiệu ứng xóa chữ */}
+                  {/* Erase effects */}
                   <div>
                     <label className="block text-[11px] font-mono font-bold uppercase mb-1.5">
-                      Hiệu ứng xóa chữ:
+                      Erase Effect:
                     </label>
                     <div className="grid grid-cols-2 gap-1.5">
                       {ERASE_EFFECT_OPTIONS.map(eff => (
@@ -1612,44 +1995,95 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                 </div>
               )}
 
-              {/* Card 2: Đổi bài học nhanh (Quick Switch Lesson) */}
+              {/* Card 2: Quick Switch Lesson */}
               {(settingsTab === 'switch_lesson' || settingsTab === 'all') && (
                 <div className="neo-box-sm bg-white p-3.5 space-y-3">
                   <div className="flex items-center justify-between border-b border-black pb-2">
                     <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
                       <RefreshCw size={14} className="text-[#FF3838]" />
-                      <span>Đổi bài học nhanh</span>
+                      <span>Quick Switch Lesson</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setActiveMainTab('library')}
                       className="text-[10px] font-mono text-neutral-600 underline font-bold hover:text-black"
                     >
-                      Mở thư viện →
+                      Open Library →
                     </button>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-[11px] font-mono font-bold uppercase text-neutral-600">
-                      Chọn bài đọc từ thư viện:
-                    </label>
-                    <select
-                      value={selectedQuickSwitchId || activePresentedResource.id}
-                      onChange={e => setSelectedQuickSwitchId(e.target.value)}
-                      className="neo-input w-full text-xs py-1.5 font-bold"
-                    >
-                      {resources.map(r => (
-                        <option key={r.id} value={r.id}>
-                          {r.title} ({r.sentences?.length || 0} câu - {r.level})
-                        </option>
-                      ))}
-                    </select>
+                  <div className="space-y-2.5">
+                    {/* Layer 1: Select category chips to filter related reading passages */}
+                    <div data-testid="quick-switch-category-layer">
+                      <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-neutral-600 mb-1">
+                        <span className="flex items-center gap-1">
+                          <Filter size={11} className="text-black" />
+                          <span>Category ({existingCategories.length}):</span>
+                        </span>
+                        {quickSwitchCategory !== 'all' && (
+                          <button
+                            type="button"
+                            onClick={() => setQuickSwitchCategory('all')}
+                            className="text-[10px] text-neutral-500 hover:text-black underline font-normal"
+                          >
+                            All
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setQuickSwitchCategory('all')}
+                          className={`px-2 py-0.5 text-[10px] font-mono font-bold border transition-all ${
+                            quickSwitchCategory === 'all'
+                              ? 'bg-black text-white border-black shadow-[1px_1px_0px_#000]'
+                              : 'bg-white text-neutral-700 border-black/40 hover:bg-neutral-100'
+                          }`}
+                        >
+                          All ({resources.length})
+                        </button>
+                        {existingCategories.map(cat => {
+                          const count = resources.filter(r => r.category === cat).length;
+                          const isSelected = quickSwitchCategory === cat;
+                          return (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => {
+                                setQuickSwitchCategory(cat);
+                                const inCat = resources.filter(r => r.category === cat);
+                                if (inCat.length > 0 && !inCat.some(r => r.id === selectedQuickSwitchId)) {
+                                  setSelectedQuickSwitchId(inCat[0].id);
+                                }
+                              }}
+                              className={`px-2 py-0.5 text-[10px] font-mono font-bold border transition-all ${
+                                isSelected
+                                  ? 'bg-[#FFE500] text-black border-black shadow-[1px_1px_0px_#000]'
+                                  : 'bg-white text-neutral-700 border-black/40 hover:bg-neutral-100'
+                              }`}
+                            >
+                              {cat} ({count})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Layer 2: Select reading article in filtered category (Rich Neobrutalist Combobox) */}
+                    <div>
+                      <ResourceSelectCombobox
+                        label={`Choose article (${quickSwitchFilteredResources.length}):`}
+                        resources={quickSwitchFilteredResources}
+                        selectedId={selectedQuickSwitchId || (quickSwitchFilteredResources.some(r => r.id === activePresentedResource.id) ? activePresentedResource.id : quickSwitchFilteredResources[0]?.id || '')}
+                        onSelect={id => setSelectedQuickSwitchId(id)}
+                        activeId={activePresentedResource.id}
+                      />
+                    </div>
 
                     {/* Target resource summary */}
                     {(() => {
-                      const targetRes = resources.find(
-                        r => r.id === (selectedQuickSwitchId || activePresentedResource.id)
-                      );
+                      const effectiveId = selectedQuickSwitchId || (quickSwitchFilteredResources.some(r => r.id === activePresentedResource.id) ? activePresentedResource.id : quickSwitchFilteredResources[0]?.id || '');
+                      const targetRes = resources.find(r => r.id === effectiveId);
                       if (!targetRes) return null;
                       const isCurrent = targetRes.id === activePresentedResource.id;
                       return (
@@ -1658,7 +2092,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                             <span className="font-bold text-black truncate max-w-[170px]">{targetRes.title}</span>
                             {isCurrent ? (
                               <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
-                                ĐANG CHIẾU
+                                LIVE
                               </span>
                             ) : (
                               <span className="text-neutral-500 text-[10px]">{targetRes.level}</span>
@@ -1674,9 +2108,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const targetRes = resources.find(
-                          r => r.id === (selectedQuickSwitchId || activePresentedResource.id)
-                        );
+                        const effectiveId = selectedQuickSwitchId || (quickSwitchFilteredResources.some(r => r.id === activePresentedResource.id) ? activePresentedResource.id : quickSwitchFilteredResources[0]?.id || '');
+                        const targetRes = resources.find(r => r.id === effectiveId);
                         if (targetRes) {
                           handleOpenClassroom(targetRes);
                         }
@@ -1684,19 +2117,19 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       className="neo-btn w-full py-2 bg-[#4ADE80] text-black text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-green-400"
                     >
                       <RefreshCw size={13} />
-                      <span>Chuyển sang bài này ngay</span>
+                      <span>Switch to this article now</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Card 3: Thông tin phòng & Học sinh Online */}
+              {/* Card 3: Room Info & Online Students */}
               {(settingsTab === 'participants' || settingsTab === 'all') && (
                 <div className="neo-box-sm bg-white p-3.5 space-y-3">
                   <div className="flex items-center justify-between border-b border-black pb-2">
                     <div className="flex items-center gap-1.5 font-black text-xs uppercase text-black font-mono">
                       <Users size={14} className="text-black" />
-                      <span>Thông tin phòng & Kết nối</span>
+                      <span>Room Info & Connection</span>
                     </div>
                     <span className="neo-badge bg-[#4ADE80] text-black text-[9px] py-0 px-1 font-bold">
                       {participants.length} Online
@@ -1705,7 +2138,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
                   {/* Large Room Code Banner */}
                   <div className="p-2.5 bg-[#FFFDF0] border-2 border-black text-center shadow-[1px_1px_0px_#000]">
-                    <div className="text-[10px] font-mono uppercase text-neutral-500">Mã phòng học sinh:</div>
+                    <div className="text-[10px] font-mono uppercase text-neutral-500">Classroom Room Code:</div>
                     <div className="text-2xl font-black font-mono tracking-widest text-black mt-0.5">
                       {activeRoom.id}
                     </div>
@@ -1719,7 +2152,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       className="neo-btn w-full py-2 bg-white text-black text-xs font-bold uppercase flex items-center justify-center gap-1.5"
                     >
                       {copiedLink ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
-                      <span>{copiedLink ? 'Đã chép link học sinh!' : 'Copy Link Học Sinh (/student)'}</span>
+                      <span>{copiedLink ? 'Copied student link!' : 'Copy Student Link (/student)'}</span>
                     </button>
 
                     <button
@@ -1728,20 +2161,20 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       className="neo-btn w-full py-2 bg-[#00D2FF] text-black text-xs font-bold uppercase flex items-center justify-center gap-1.5"
                     >
                       <ExternalLink size={13} />
-                      <span>Mở Màn hình học sinh (Tab mới)</span>
+                      <span>Open Student Screen (New Tab)</span>
                     </button>
                   </div>
 
-                  {/* Danh sách học sinh online */}
+                  {/* Online student roster */}
                   <div className="pt-2 border-t border-black/15 space-y-1.5">
                     <div className="text-[11px] font-mono font-bold uppercase text-neutral-700 flex items-center justify-between">
-                      <span>Danh sách học sinh:</span>
-                      <span className="text-[10px] text-neutral-500 font-normal">{participants.length} bạn</span>
+                      <span>Student List:</span>
+                      <span className="text-[10px] text-neutral-500 font-normal">{participants.length} connected</span>
                     </div>
 
                     {participants.length === 0 ? (
                       <p className="text-[11px] font-mono text-neutral-400 italic">
-                        Chưa có học sinh kết nối. Chia sẻ mã <b>{activeRoom.id}</b> để học sinh tham gia.
+                        No students connected yet. Share code <b>{activeRoom.id}</b> for students to join.
                       </p>
                     ) : (
                       <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
@@ -1758,7 +2191,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                               type="button"
                               onClick={() => removeParticipant(activeRoom.id, p.participantId)}
                               className="text-neutral-400 hover:text-red-600 transition-colors shrink-0 ml-1"
-                              title="Ngắt kết nối học sinh này"
+                              title="Disconnect this student"
                             >
                               <UserX size={12} />
                             </button>
@@ -1776,7 +2209,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       className="neo-btn w-full py-2 bg-white text-[#FF3838] border-2 border-[#FF3838] hover:bg-red-50 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5"
                     >
                       <X size={13} />
-                      <span>Kết thúc buổi học</span>
+                      <span>End Live Session</span>
                     </button>
                   </div>
                 </div>
@@ -1792,10 +2225,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                 Live Classroom Ready
               </span>
               <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black">
-                Bắt đầu phòng học mới
+                Start New Classroom
               </h2>
               <p className="font-reading text-sm sm:text-base text-neutral-600">
-                Chọn bài đọc tiếng Anh từ thư viện để mở lớp học trực tiếp và đồng bộ nhịp đọc cho học sinh.
+                Select an English reading article from the library to launch a live classroom and synchronize reading pace for students.
               </p>
             </div>
 
@@ -1803,7 +2236,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               {resources.length === 0 ? (
                 <div className="p-6 bg-[#FFFDF0] border border-dashed border-black text-center space-y-3">
                   <p className="text-xs font-mono text-neutral-600">
-                    Thư viện chưa có bài đọc nào. Hãy đồng bộ tài liệu mẫu để bắt đầu ngay!
+                    No reading articles in library yet. Sync sample articles to start immediately!
                   </p>
                   <button
                     type="button"
@@ -1811,34 +2244,81 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     onClick={handleSyncFullResources}
                     className="neo-btn px-4 py-2 bg-[#4ADE80] text-black text-xs font-black uppercase"
                   >
-                    {isSyncing ? 'Đang đồng bộ...' : '🔄 Đồng bộ 5 TED Talks & Steve Jobs'}
+                    {isSyncing ? 'Syncing...' : '🔄 Sync Sample Library (26 articles)'}
                   </button>
                 </div>
               ) : (
                 <>
-                  {/* Select resource */}
+                  {/* Layer 1: Category selection chips */}
+                  <div className="space-y-1.5" data-testid="setup-category-layer">
+                    <div className="flex items-center justify-between text-xs font-mono font-bold uppercase text-neutral-600">
+                      <span className="flex items-center gap-1.5">
+                        <Filter size={12} className="text-black" />
+                        <span>Category ({existingCategories.length}):</span>
+                      </span>
+                      {setupCategory !== 'all' && (
+                        <button
+                          type="button"
+                          onClick={() => setSetupCategory('all')}
+                          className="text-[10px] text-neutral-500 hover:text-black underline font-normal"
+                        >
+                          All
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setSetupCategory('all')}
+                        className={`px-2.5 py-1 text-xs font-mono font-bold border transition-all ${
+                          setupCategory === 'all'
+                            ? 'bg-black text-white border-black shadow-[1px_1px_0px_#000]'
+                            : 'bg-white text-neutral-700 border-black/40 hover:bg-neutral-100'
+                        }`}
+                      >
+                        All ({resources.length})
+                      </button>
+                      {existingCategories.map(cat => {
+                        const count = resources.filter(r => r.category === cat).length;
+                        const isSelected = setupCategory === cat;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => {
+                              setSetupCategory(cat);
+                              const inCat = resources.filter(r => r.category === cat);
+                              if (inCat.length > 0 && !inCat.some(r => r.id === selectedSetupResourceId)) {
+                                setSelectedSetupResourceId(inCat[0].id);
+                              }
+                            }}
+                            className={`px-2.5 py-1 text-xs font-mono font-bold border transition-all ${
+                              isSelected
+                                ? 'bg-[#FFE500] text-black border-black shadow-[1px_1px_0px_#000]'
+                                : 'bg-white text-neutral-700 border-black/40 hover:bg-neutral-100'
+                            }`}
+                          >
+                            {cat} ({count})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Layer 2: Select reading article from library (Rich Neobrutalist Combobox) */}
                   <div>
-                    <label className="block text-xs font-mono font-bold uppercase mb-1.5">
-                      Chọn bài đọc từ thư viện:
-                    </label>
-                    <select
-                      value={selectedSetupResourceId || (resources[0]?.id || '')}
-                      onChange={e => setSelectedSetupResourceId(e.target.value)}
-                      className="neo-input w-full text-sm py-2 font-bold"
-                    >
-                      {resources.map(r => (
-                        <option key={r.id} value={r.id}>
-                          {r.title} ({r.sentences?.length || 0} câu • {r.level} • {r.category})
-                        </option>
-                      ))}
-                    </select>
+                    <ResourceSelectCombobox
+                      label={`Select reading article (${setupFilteredResources.length}):`}
+                      resources={setupFilteredResources}
+                      selectedId={selectedSetupResourceId || (setupFilteredResources[0]?.id || '')}
+                      onSelect={id => setSelectedSetupResourceId(id)}
+                    />
                   </div>
 
                   {/* Preview card of selected resource */}
                   {(() => {
-                    const selectedRes = resources.find(
-                      r => r.id === (selectedSetupResourceId || (resources[0]?.id || ''))
-                    );
+                    const effectiveSetupId = selectedSetupResourceId || (setupFilteredResources[0]?.id || '');
+                    const selectedRes = resources.find(r => r.id === effectiveSetupId);
                     if (!selectedRes) return null;
                     return (
                       <div className="neo-box-sm bg-[#FFFDF0] p-4 border-2 border-black space-y-2">
@@ -1854,11 +2334,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                           "{selectedRes.canonicalText.slice(0, 180)}..."
                         </p>
                         <div className="flex items-center gap-3 text-[11px] font-mono text-neutral-500 pt-1 border-t border-black/10">
-                          <span>{selectedRes.sentences?.length || 0} câu</span>
+                          <span>{selectedRes.sentences?.length || 0} sentences</span>
                           <span>•</span>
-                          <span>{selectedRes.paragraphs?.length || 0} đoạn</span>
+                          <span>{selectedRes.paragraphs?.length || 0} paragraphs</span>
                           <span>•</span>
-                          <span>{selectedRes.annotations?.length || 0} cụm từ</span>
+                          <span>{selectedRes.annotations?.length || 0} chunks</span>
                         </div>
                       </div>
                     );
@@ -1868,7 +2348,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
                       <label className="block text-[11px] font-mono font-bold uppercase mb-1">
-                        Đơn vị chiếu ban đầu:
+                        Initial reading unit:
                       </label>
                       <div className="flex border border-black shadow-[1px_1px_0px_#000]">
                         <button
@@ -1878,7 +2358,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                             stagedGranularity === 'sentence' ? 'bg-[#FFE500]' : 'bg-white'
                           }`}
                         >
-                          Theo câu
+                          Sentence
                         </button>
                         <button
                           type="button"
@@ -1887,14 +2367,14 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                             stagedGranularity === 'paragraph' ? 'bg-[#FFE500]' : 'bg-white'
                           }`}
                         >
-                          Theo đoạn
+                          Paragraph
                         </button>
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-mono font-bold uppercase mb-1">
-                        Hiệu ứng xóa:
+                        Erase effect:
                       </label>
                       <select
                         value={stagedEraseEffect}
@@ -1912,16 +2392,15 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const chosen = resources.find(
-                        r => r.id === (selectedSetupResourceId || (resources[0]?.id || ''))
-                      );
+                      const effectiveSetupId = selectedSetupResourceId || (setupFilteredResources[0]?.id || '');
+                      const chosen = resources.find(r => r.id === effectiveSetupId);
                       if (chosen) {
                         handleOpenClassroom(chosen);
                       }
                     }}
                     className="neo-btn w-full py-3.5 bg-[#FF3838] text-white text-sm sm:text-base font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-[3px_3px_0px_#000]"
                   >
-                    <span>🚀 Bắt đầu phòng học ngay!</span>
+                    <span>🚀 Launch Classroom Now!</span>
                   </button>
 
                   <div className="text-center pt-1">
@@ -1930,7 +2409,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       onClick={() => setActiveMainTab('library')}
                       className="text-xs font-mono text-neutral-600 underline font-bold hover:text-black"
                     >
-                      Hoặc vào Thư viện để duyệt toàn bộ bài đọc →
+                      Or go to Library to browse all reading articles →
                     </button>
                   </div>
                 </>
@@ -1954,10 +2433,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   onClick={() => setActiveMainTab('library')}
                   className="neo-btn-sm px-2.5 py-1 bg-neutral-100 text-black text-xs font-bold"
                 >
-                  ← Quay lại Thư viện
+                  ← Back to Library
                 </button>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-neutral-600">Đang chọn bài:</span>
+                  <span className="text-xs font-mono font-bold text-neutral-600">Selected Article:</span>
                   <select
                     value={studioResource.id}
                     onChange={e => {
@@ -1987,7 +2466,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             </div>
           ) : (
             <div className="p-8 text-center text-xs font-mono text-neutral-500">
-              Hãy chọn một bài đọc trong thư viện để mở Studio chỉnh sửa highlights!
+              Select a reading article from the library to open Studio and edit highlights!
             </div>
           )}
         </div>

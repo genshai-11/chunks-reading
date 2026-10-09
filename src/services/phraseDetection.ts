@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { PhraseAnnotation, PhraseType, Granularity } from '../types';
+import type { PhraseAnnotation, PhraseType, Granularity } from '../types';
 
 interface DictionaryEntry {
   phrase: string;
